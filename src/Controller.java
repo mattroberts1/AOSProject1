@@ -1,14 +1,33 @@
 import java.util.ArrayList;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.IOException;
+import java.net.Socket;
 public class Controller {
 
 	public static void main(String[] args) {
-		Config conf = new Config(args[0]);
+	//	Config conf = new Config(args[0]);
 		
+		Server s = new Server();
+		try {
+			new Thread(s).start();
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+		Client c1 = new Client();
+		Client c2 = new Client();
+		try {
+			new Thread(c1).start();
+			new Thread(c2).start();
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
 		
+		 /* This code just checks that config file is being read correctly 
+		 */
 		/*
-		 * This code just checks that config file is being read correctly 
-		 * 
-		
 		System.out.println("numNodes: "+conf.getNumNodes());
 		System.out.println("minPerActive: "+conf.getMinPerActive());
 		System.out.println("maxPerActive: "+conf.getMaxPerActive());
@@ -40,7 +59,7 @@ public class Controller {
 			System.out.println();
 		}
 		
-		*/
+	*/
 	}
 
 }
