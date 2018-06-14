@@ -10,6 +10,27 @@ public class Client implements Runnable{
     public void run(){
     	
     	try {
+       
+        Socket socket = new Socket("dc01.utdallas.edu",9878);
+        ObjectOutputStream oos = null;
+        ObjectInputStream ois = null;
+        oos = new ObjectOutputStream(socket.getOutputStream());
+        System.out.println("client sending hello");
+        oos.writeObject("hello from client");
+        ois = new ObjectInputStream(socket.getInputStream());
+        String message = (String) ois.readObject();
+        System.out.println("Client received message: " + message);
+        oos.writeObject("exit");
+        socket.close();
+    	}
+        catch(Exception e)
+       	{
+       	 e.printStackTrace();
+       	}
+    	
+    	
+    	/*
+    	try {
         //get the localhost IP address, if server is running on some other IP, you need to use that
         InetAddress host = InetAddress.getLocalHost();
         Socket socket = null;
@@ -37,7 +58,7 @@ public class Client implements Runnable{
     	{
     	 e.printStackTrace();
     	}
-        
+       */ 
         
     }
 }

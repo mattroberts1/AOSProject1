@@ -2,12 +2,13 @@ import java.util.ArrayList;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.Socket;
 public class Controller {
 
 	public static void main(String[] args) {
-	//	Config conf = new Config(args[0]);
 		
+		/*
 		Server s = new Server();
 		try {
 			new Thread(s).start();
@@ -24,10 +25,29 @@ public class Controller {
 		catch(Exception e) {
 			e.printStackTrace();
 		}
+		*/
+		String name=getdcxxName();
+		if(name.equals("dc02"))
+		{
+			Client c = new Client();
+			c.run();
+		}
+		if(name.equals("dc01"))
+		{
+			Server s = new Server();
+			s.run();
+		}
 		
+	}
+	
+	
+
+	public static void testReadConfig()
+	{
 		 /* This code just checks that config file is being read correctly 
 		 */
 		/*
+		Config conf = new Config(args[0]);
 		System.out.println("numNodes: "+conf.getNumNodes());
 		System.out.println("minPerActive: "+conf.getMinPerActive());
 		System.out.println("maxPerActive: "+conf.getMaxPerActive());
@@ -59,7 +79,21 @@ public class Controller {
 			System.out.println();
 		}
 		
-	*/
+	*/	
 	}
-
+	
+	public static String getdcxxName()
+	{
+		String hostName="";
+		try {
+		hostName=InetAddress.getLocalHost().getHostName();
+		}
+		catch(Exception e)
+		{	
+			e.printStackTrace();
+		}
+		String[] temp = hostName.split("\\.");
+		return temp[0];
+	}
+	
 }

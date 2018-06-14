@@ -13,11 +13,33 @@ public class Server implements Runnable{
     private static int port = 9878;
     public Server()
     {
-    	
     }
     public void run(){
     	
+    	try {
+    		server = new ServerSocket(port);
+            while(true)
+            {
+            	System.out.println("Server is waiting");
+            	 Socket socket = server.accept();
+            	 ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+            	 String message = (String) ois.readObject();
+            	 System.out.println("Server received message: " + message);
+                 ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+                 oos.writeObject("hello from server.  received message: "+message);
+                 ois.close();
+                 oos.close();
+                 socket.close();
+                 if(message.equalsIgnoreCase("exit")) break;
+            }
+
+    	}
+    	catch(Exception e)
+    	{
+    		e.printStackTrace();
+    	}
     	
+    	/*
     	try {
         //create the socket server object
         server = new ServerSocket(port);
@@ -50,7 +72,7 @@ public class Server implements Runnable{
     	{
     		e.printStackTrace();
     	}
-        
+        */
         
         
     } 
