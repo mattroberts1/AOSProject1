@@ -12,6 +12,7 @@ public class Controller {
 		String thisNodesName=getdcxxName();
 		String[][] nodeIDList =conf.getNodeIDList();
 		int thisNodesID=-1;
+		ArrayList<ArrayList<String>> neighborList=conf.getNeighborList();
 		for(int i=0;i<nodeIDList.length;i++)
 		{
 			if(thisNodesName.equals(nodeIDList[i][1]))
@@ -29,13 +30,20 @@ public class Controller {
 		Thread serverThread = new Thread(s);
 		serverThread.start();
 			
-
-	}
-	
-
-	public static void testReadConfig()
-	{
-	
+		//establish connections between this node and other nodes listed in config file
+		for(int i=0;i<neighborList.get(thisNodesID).size();i++)  
+		{
+			int IDarg; 
+			String hostNamearg; 
+			int listenPortarg;
+			IDarg=Integer.parseInt(neighborList.get(thisNodesID).get(i));
+			hostNamearg=nodeIDList[IDarg][1]; //find host name of the node we're connecting to
+			listenPortarg=Integer.parseInt(nodeIDList[IDarg][2]);
+			Client c = new Client(IDarg, hostNamearg, listenPortarg);
+			Thread clientThread= new Thread(c);
+			clientThread.start();
+		}
+		
 	}
 	
 	public static String getdcxxName()
