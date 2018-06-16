@@ -9,8 +9,9 @@ public class Config {
 	int snapshotDelay;
 	int maxNumber; 
 	String [][] portList;
-	
 	ArrayList<ArrayList<String>> neighborList;
+	
+	
 	Config(String filepath)
 	{ 
 		Scanner sc=null;
