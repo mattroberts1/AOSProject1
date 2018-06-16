@@ -8,7 +8,7 @@ public class Config {
 	int minSendDelay;
 	int snapshotDelay;
 	int maxNumber; 
-	String [][] portList;
+	String [][] nodeIDList;
 	ArrayList<ArrayList<String>> neighborList;
 	
 	
@@ -52,16 +52,16 @@ public class Config {
 				snapshotDelay=Integer.parseInt(tokens[4]);
 				maxNumber=Integer.parseInt(tokens[5]);
 				readFirstLine=true;
-				portList=new String [numNodes][3];
+				nodeIDList=new String [numNodes][3];
 				neighborList=new ArrayList<ArrayList<String>>(numNodes);
 				continue;
 			}
 			if(counter1<numNodes) 
 			{
 				String[] tokens = line.split("\\s+");
-				portList[counter1][0]=tokens[0];
-				portList[counter1][1]=tokens[1];
-				portList[counter1][2]=tokens[2];
+				nodeIDList[counter1][0]=tokens[0];
+				nodeIDList[counter1][1]=tokens[1];
+				nodeIDList[counter1][2]=tokens[2];
 				counter1++;
 				continue;
 			}
@@ -114,9 +114,9 @@ public class Config {
 	{
 		return maxNumber;
 	}
-	public String[][] getPortList()
+	public String[][] getNodeIDList()
 	{
-		return portList;
+		return nodeIDList;
 	}
 	public ArrayList<ArrayList<String>> getNeighborList()
 	{

@@ -10,11 +10,11 @@ public class Controller {
 		Config conf = new Config(args[0]);
 		boolean isActive=false;
 		String thisNodesName=getdcxxName();
-		String[][] portList =conf.getPortList();
+		String[][] nodeIDList =conf.getNodeIDList();
 		int thisNodesID=-1;
-		for(int i=0;i<portList.length;i++)
+		for(int i=0;i<nodeIDList.length;i++)
 		{
-			if(thisNodesName.equals(portList[i][1]))
+			if(thisNodesName.equals(nodeIDList[i][1]))
 			{
 				thisNodesID=i;
 			}
@@ -23,9 +23,14 @@ public class Controller {
 		{
 			isActive=true;
 		}
+		
+		
+		Server s = new Server(Integer.parseInt(nodeIDList[thisNodesID][3]));
+		Thread serverThread = new Thread(s);
+		serverThread.start();
+			
 
 	}
-	
 	
 
 	public static void testReadConfig()
