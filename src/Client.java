@@ -23,10 +23,12 @@ public class Client implements Runnable{
 	}
 	
     public void run(){
+    	
     	Socket socket=null;
     	boolean retry = true;
     	while(retry)
     	{
+    		
     		try {
     			System.out.println("Connecting to "+hostAddr +" on port "+listenPort);
     			socket = new Socket(hostAddr,listenPort);
