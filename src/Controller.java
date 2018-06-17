@@ -26,7 +26,7 @@ public class Controller {
 		}
 		
 		
-		Server s = new Server(Integer.parseInt(nodeIDList[thisNodesID][3]));
+		Server s = new Server(Integer.parseInt(nodeIDList[thisNodesID][2]));
 		Thread serverThread = new Thread(s);
 		serverThread.start();
 			
