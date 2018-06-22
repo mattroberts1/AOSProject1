@@ -1,8 +1,8 @@
-
+import java.io.Serializable;
 
 
 //messages are passed through the sockets
-public class Message {
+public class Message implements Serializable {
 	int senderNode=-1;
 	int receiverNode=-1;
 	String text="";
