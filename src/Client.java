@@ -18,12 +18,14 @@ public class Client implements Runnable{
 	String hostName;
 	String hostAddr;
 	int listenPort;
-	public Client(int IDarg, String hostNamearg, int listenPortarg)  //info for node being connected to
+	LinkedBlockingQueue<Message> clientQueue;
+	public Client(int IDarg, String hostNamearg, int listenPortarg, LinkedBlockingQueue<Message> q)  //info for node being connected to
 	{
 		ID=IDarg;
 		hostName=hostNamearg;
 		listenPort=listenPortarg;	
 		hostAddr=hostName+".utdallas.edu";
+		clientQueue = q;
 	}
 	
     public void run(){
@@ -54,7 +56,11 @@ public class Client implements Runnable{
     	ObjectOutputStream oos = null;
     	try {
     	oos = new ObjectOutputStream(socket.getOutputStream());
-    	oos.writeObject("hello from client");
+    	Message m = clientQueue.poll();
+    	if(m!=null)
+    	{
+    		oos.writeObject(m);
+    	}
     	}
     	catch(Exception e)
     	{

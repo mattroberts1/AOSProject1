@@ -20,8 +20,8 @@ public class ListenerSocket implements Runnable {
 	{
 		try {
 			ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
-			String message = (String) ois.readObject();
-			System.out.println("Server received message: " + message);
+			Message m = (Message) ois.readObject();
+			serverQueue.put(m);
 //			ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
 //			oos.writeObject("hello from server.  received message: "+message);
 			ois.close();

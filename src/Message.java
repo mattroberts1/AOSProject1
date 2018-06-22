@@ -12,4 +12,16 @@ public class Message {
 		receiverNode=to;
 		text=m;
 	}
+	public String getText()
+	{
+		return text;
+	}
+	public int getSender()
+	{
+		return senderNode;
+	}
+	public int getReceiver()
+	{
+		return receiverNode;
+	}
 }
