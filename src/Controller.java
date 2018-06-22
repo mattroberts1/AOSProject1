@@ -4,6 +4,8 @@ import java.io.OutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 public class Controller {
 
 	public static void main(String[] args) {
@@ -25,8 +27,8 @@ public class Controller {
 			isActive=true;
 		}
 		
-		
-		Server s = new Server(Integer.parseInt(nodeIDList[thisNodesID][2]));
+		LinkedBlockingQueue<Message> serverQueue = new LinkedBlockingQueue<>();
+		Server s = new Server(Integer.parseInt(nodeIDList[thisNodesID][2]), serverQueue);
 		Thread serverThread = new Thread(s);
 		serverThread.start();
 			

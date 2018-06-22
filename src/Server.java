@@ -4,15 +4,20 @@ import java.io.ObjectOutputStream;
 import java.lang.ClassNotFoundException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
-//NEEDS TO PASS DATA BACK TO MAIN THREAD
+
+
 
 public class Server implements Runnable{   	
     private static ServerSocket server;
-    private static int port;
-    public Server(int p)  //port server will listen on
+    private static int port;  //port server will listen on
+    LinkedBlockingQueue<Message> serverQueue; //queue for passing data back to controller
+    public Server(int p, LinkedBlockingQueue<Message> q)  
     {
     	port=p;
+    	serverQueue=q;
     }
     public void run(){
     	
@@ -22,7 +27,7 @@ public class Server implements Runnable{
             {
             	System.out.println("Server is waiting");
             	 Socket socket = server.accept();
-            	 new Thread(new ListenerSocket(socket)).start();
+            	 new Thread(new ListenerSocket(socket, serverQueue)).start();
             }
 
     	}

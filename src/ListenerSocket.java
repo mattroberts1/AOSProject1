@@ -4,12 +4,17 @@ import java.io.ObjectOutputStream;
 import java.lang.ClassNotFoundException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+
 
 public class ListenerSocket implements Runnable {
-	Socket socket;
-	public ListenerSocket(Socket s)
+	Socket socket; //socket connected to client of other process
+    LinkedBlockingQueue<Message> serverQueue; //queue for passing data back to controller
+	public ListenerSocket(Socket s, LinkedBlockingQueue<Message> q)
 	{
 		socket=s;
+		serverQueue=q;
 	}
 	public void run()
 	{

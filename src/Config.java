@@ -11,7 +11,6 @@ public class Config {
 	String [][] nodeIDList;
 	ArrayList<ArrayList<String>> neighborList;
 	
-	
 	Config(String filepath)
 	{ 
 		Scanner sc=null;
@@ -79,15 +78,8 @@ public class Config {
 					neighborList.get(counter2).add(tokens[i]);
 				}
 				counter2++;
-			}
-			
-			
-			
-			
-			
+			}	
 		}
-		
-		
 	}
 
 	public int getNumNodes()

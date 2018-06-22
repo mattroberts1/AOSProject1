@@ -5,7 +5,11 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.net.ConnectException;
-//Client threads need to be tracked and controller needs to be able to pass them data to transmit
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+
+
+// Controller needs to be able to pass data to client threads to transmit
 
 
 public class Client implements Runnable{
