@@ -1,5 +1,5 @@
 import java.io.Serializable;
-
+import java.util.concurrent.atomic.*;
 
 //messages are passed through the sockets
 public class Message implements Serializable {
@@ -10,8 +10,8 @@ public class Message implements Serializable {
 	int senderNode=-1;
 	int receiverNode=-1;
 	String text="";
-	int[] timeStamp;
-	public Message(int from, int to, String m, int[] t)
+	AtomicIntegerArray timeStamp;
+	public Message(int from, int to, String m, AtomicIntegerArray t)
 	{
 		senderNode=from;
 		receiverNode=to;
@@ -30,7 +30,7 @@ public class Message implements Serializable {
 	{
 		return receiverNode;
 	}
-	public int[] getTimeStamp()
+	public AtomicIntegerArray getTimeStamp()
 	{
 		return timeStamp;
 	}

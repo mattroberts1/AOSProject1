@@ -6,6 +6,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.*;
 import java.util.Random;
 
 
@@ -16,7 +17,8 @@ public class Controller {
 		long timeOfLastSnapshot;
 		long timeOfLastMessageSend;
 		Config conf = new Config(args[0]);
-		int[] clock = new int[conf.getNumNodes()];
+		AtomicIntegerArray clock = new AtomicIntegerArray(conf.getNumNodes());
+		
 		boolean isActive=false;
 		String thisNodesName=getdcxxName();
 		String[][] nodeIDList =conf.getNodeIDList();
@@ -78,18 +80,18 @@ public class Controller {
 			if(mReceived!=null)
 			{
 				System.out.print("Received message with timestamp");
-				for(int i=0;i<clock.length;i++)
+				for(int i=0;i<clock.length();i++)
 				{
-					System.out.print(mReceived.getTimeStamp()[i]+" ");
+					System.out.print(mReceived.getTimeStamp().get(i)+" ");
 				}
 				System.out.println(".  ");
 				//update this nodes clock
-				for(int i=0;i<mReceived.getTimeStamp().length;i++)
+				for(int i=0;i<mReceived.getTimeStamp().length();i++)
 				{
-					clock[i]=Math.max(clock[i], mReceived.getTimeStamp()[i]);
+					clock.set(i,Math.max(clock.get(i), mReceived.getTimeStamp().get(i)));
 				}
 				int receiverIndex=findIndexOfNode(conf,thisNodesName);
-				clock[receiverIndex]++;
+				clock.getAndIncrement(receiverIndex);
 				if(!isActive)
 				{
 					isActive=true;
@@ -108,16 +110,16 @@ public class Controller {
 					int destinationIndex=rand.nextInt(thisNodesNeighbors.length);
 					int destinationID=thisNodesNeighbors[destinationIndex];
 					int senderIndex=findIndexOfNode(conf, thisNodesName);
-					clock[senderIndex]++;
+					clock.getAndIncrement(senderIndex);
 					Message mSend= new Message(thisNodesID, destinationID, "", clock);
 					try{
 					clientQueueList.get(destinationIndex).put(mSend);
 					}
 					catch(Exception e) {}
 					System.out.print("sending message to node "+destinationID+". clock is now ");
-					for(int i=0;i<clock.length;i++)
+					for(int i=0;i<clock.length();i++)
 					{
-						System.out.print(clock[i]+" ");
+						System.out.print(clock.get(i)+" ");
 					}
 					System.out.println(".  ");
 				}
@@ -142,7 +144,7 @@ public class Controller {
 		
 	}
 	
-	
+	//returns index of node in nodeIDList
 	public static int findIndexOfNode(Config conf, String nodeName)
 	{
 		
