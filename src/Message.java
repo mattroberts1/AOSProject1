@@ -3,6 +3,10 @@ import java.io.Serializable;
 
 //messages are passed through the sockets
 public class Message implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	int senderNode=-1;
 	int receiverNode=-1;
 	String text="";

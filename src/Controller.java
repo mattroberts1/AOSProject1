@@ -82,7 +82,7 @@ public class Controller {
 				{
 					clock[i]=Math.max(clock[i], mReceived.getTimeStamp()[i]);
 				}
-				int receiverIndex=findIndexOfNode(conf,thisNodesID);
+				int receiverIndex=findIndexOfNode(conf,thisNodesName);
 				clock[receiverIndex]++;
 				if(!isActive)
 				{
@@ -101,7 +101,7 @@ public class Controller {
 					Random rand = new Random();
 					int destinationIndex=rand.nextInt(thisNodesNeighbors.length);
 					int destinationID=thisNodesNeighbors[destinationIndex];
-					int senderIndex=findIndexOfNode(conf, thisNodesID);
+					int senderIndex=findIndexOfNode(conf, thisNodesName);
 					clock[senderIndex]++;
 					Message mSend= new Message(thisNodesID, destinationID, "", clock);
 					try{
@@ -136,13 +136,13 @@ public class Controller {
 	}
 	
 	
-	public static int findIndexOfNode(Config conf, int nodeID)
+	public static int findIndexOfNode(Config conf, String nodeName)
 	{
 		
 		String[][] nodeIDList =conf.getNodeIDList();
 		for(int i=0;i<nodeIDList.length;i++)
 		{
-			if(nodeID==Integer.parseInt(nodeIDList[i][1]))
+			if(nodeName.equals(nodeIDList[i][1]))
 					{
 						return i;
 					}
