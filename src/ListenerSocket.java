@@ -18,15 +18,14 @@ public class ListenerSocket implements Runnable {
 	}
 	public void run()
 	{
+		
 		try {
 			ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+			while(true)
+			{
 			Message m = (Message) ois.readObject();
 			serverQueue.put(m);
-//			ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-//			oos.writeObject("hello from server.  received message: "+message);
-			ois.close();
-//			oos.close();
-			socket.close();
+			}
 		}
     	catch(Exception e)
     	{

@@ -9,9 +9,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 
-// Controller needs to be able to pass data to client threads to transmit
-
-
 public class Client implements Runnable{
 
 	int ID;
@@ -32,19 +29,18 @@ public class Client implements Runnable{
     	
     	Socket socket=null;
     	boolean retry = true;
-    	while(retry)
+    	while(retry) //keep trying to connect to server until it comes online
     	{
     		
     		try {
-    			System.out.println("Connecting to "+hostAddr +" on port "+listenPort);
     			socket = new Socket(hostAddr,listenPort);
     			retry=false;
+    			System.out.println("connected to "+hostAddr);
     		}
     		catch(ConnectException e)
     		{
-    			System.out.println("Server not available, will retry in 5 seconds");
     			try{
-    			Thread.sleep(5000);
+    			Thread.sleep(1000);
     			}
     			catch(Exception x){}
     		}
@@ -53,32 +49,26 @@ public class Client implements Runnable{
     			e.printStackTrace();
     		}
     	}
+ 
     	ObjectOutputStream oos = null;
-    	try {
-    	oos = new ObjectOutputStream(socket.getOutputStream());
-    	Message m = clientQueue.poll();
-    	if(m!=null)
+    	try 
     	{
-    		oos.writeObject(m);
-    	}
+    		oos = new ObjectOutputStream(socket.getOutputStream());
+    		//loop for sending out messages received from controller
+    		while(true)
+    		{
+    			Message m = clientQueue.poll();
+    			if(m!=null)
+    			{
+    				oos.writeObject(m);
+    			}
+    		}
     	}
     	catch(Exception e)
     	{
     		e.printStackTrace();
     	}
-        /*
-        ObjectOutputStream oos = null;
-        ObjectInputStream ois = null;
-        oos = new ObjectOutputStream(socket.getOutputStream());
-        System.out.println("client sending hello");
-        oos.writeObject("hello from client");
-        ois = new ObjectInputStream(socket.getInputStream());
-        String message = (String) ois.readObject();
-        System.out.println("Client received message: " + message);
-        oos.writeObject("exit");
-        socket.close();
-         
-         
-         */
     }
+
+
 }
