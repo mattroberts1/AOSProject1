@@ -77,6 +77,12 @@ public class Controller {
 			Message mReceived=serverQueue.poll();
 			if(mReceived!=null)
 			{
+				System.out.print("Received message with timestamp");
+				for(int i=0;i<clock.length;i++)
+				{
+					System.out.print(mReceived.getTimeStamp()[i]+" ");
+				}
+				System.out.println(".  ");
 				//update this nodes clock
 				for(int i=0;i<mReceived.getTimeStamp().length;i++)
 				{
@@ -113,6 +119,7 @@ public class Controller {
 					{
 						System.out.print(clock[i]+" ");
 					}
+					System.out.println(".  ");
 				}
 			}
 			
