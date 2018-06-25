@@ -27,6 +27,12 @@ public class ListenerSocket implements Runnable {
 				Message m = (Message) ois.readObject();
 				if(m.getMessageType().equals("APPMSG"))
 					{
+					System.out.print("received application message with clock:");
+					for(int i=0;i<m.getTimeStamp().length();i++)
+					{
+						System.out.print(m.getTimeStamp().get(i)+" ");
+					}
+					System.out.println();
 						serverQueue.put(m);
 					}
 				if(m.getMessageType().equals("CTRLMSG"))
