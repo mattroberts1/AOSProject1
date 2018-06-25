@@ -111,7 +111,7 @@ public class Controller {
 			{
 				if(System.currentTimeMillis()>(timeOfLastMessageSend+conf.getMinSendDelay()))  
 				{  
-					if(messagesForThisCycle>0)
+					if(messagesForThisCycle>0&& totalMessagesSent<conf.getMaxNumber())
 					{
 						//send out a message to a random neighbor
 
@@ -135,6 +135,7 @@ public class Controller {
 							System.out.println(".  ");
 							timeOfLastMessageSend=System.currentTimeMillis();
 							messagesForThisCycle--;
+							totalMessagesSent++;
 						}
 					}
 				}
