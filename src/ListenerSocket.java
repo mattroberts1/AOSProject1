@@ -4,19 +4,22 @@ import java.io.ObjectOutputStream;
 import java.lang.ClassNotFoundException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 
 public class ListenerSocket implements Runnable {
 	Socket socket; //socket connected to client of other process
-    LinkedBlockingQueue<Message> serverQueue; //queue for received application messages
-    LinkedBlockingQueue<Message> controlQueue;  //queue for received control messages 
-	public ListenerSocket(Socket s, LinkedBlockingQueue<Message> sq, LinkedBlockingQueue<Message> cq)
+	ArrayList<LinkedBlockingQueue<Message>> serverQueueList; //queue for received application messages
+	ArrayList<LinkedBlockingQueue<Message>> controlQueueList;  //queue for received control messages 
+	int[] nodeQueueLocations;
+	public ListenerSocket(Socket s, ArrayList<LinkedBlockingQueue<Message>> sql, ArrayList<LinkedBlockingQueue<Message>> cql, int[] nql)
 	{
 		socket=s;
-		serverQueue=sq;
-		controlQueue=cq;
+		serverQueueList=sql;
+		controlQueueList=cql;
+		nodeQueueLocations=nql;
 	}
 	public void run()
 	{
@@ -25,19 +28,21 @@ public class ListenerSocket implements Runnable {
 			{
 				ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
 				Message m = (Message) ois.readObject();
+				int queueIndex=-1;
+				for(int i=0;i<nodeQueueLocations.length;i++)//find the index of the queue the message needs to be passed to
+				{
+					if(nodeQueueLocations[i]==m.getSender())
+					{
+						queueIndex=i;
+					}
+				}
 				if(m.getMessageType().equals("APPMSG"))
 					{
-					System.out.print("received application message with clock:");
-					for(int i=0;i<m.getTimeStamp().length();i++)
-					{
-						System.out.print(m.getTimeStamp().get(i)+" ");
-					}
-					System.out.println();
-						serverQueue.put(m);
+						serverQueueList.get(queueIndex).put(m);
 					}
 				if(m.getMessageType().equals("CTRLMSG"))
 				{
-					controlQueue.put(m);
+					controlQueueList.get(queueIndex).put(m);
 				}
 
 			}

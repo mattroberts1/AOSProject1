@@ -4,6 +4,7 @@ import java.io.ObjectOutputStream;
 import java.lang.ClassNotFoundException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -13,13 +14,15 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class Server implements Runnable{   	
     private static ServerSocket server;
     private static int port;  //port server will listen on
-    LinkedBlockingQueue<Message> serverQueue; //queue for passing application messages back to controller
-    LinkedBlockingQueue<Message> controlQueue;
-    public Server(int p, LinkedBlockingQueue<Message> sq, LinkedBlockingQueue<Message> cq)  
+    ArrayList<LinkedBlockingQueue<Message>> serverQueueList; //queue for passing application messages back to controller
+    ArrayList<LinkedBlockingQueue<Message>> controlQueueList;
+    int[] nodeQueueLocations;
+    public Server(int p, ArrayList<LinkedBlockingQueue<Message>> sql, ArrayList<LinkedBlockingQueue<Message>> cql, int[] nql)  
     {
     	port=p;
-    	serverQueue=sq;
-    	controlQueue=cq;
+    	serverQueueList=sql;
+    	controlQueueList=cql;
+    	nodeQueueLocations=nql;
     }
     public void run(){
     	
@@ -29,7 +32,7 @@ public class Server implements Runnable{
             {
             	System.out.println("Server is listening for incoming connections");
             	 Socket socket = server.accept();
-            	 new Thread(new ListenerSocket(socket, serverQueue, controlQueue)).start();
+            	 new Thread(new ListenerSocket(socket, serverQueueList, controlQueueList, nodeQueueLocations)).start();
             }
 
     	}

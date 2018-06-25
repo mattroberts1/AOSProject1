@@ -18,7 +18,9 @@ public class Controller {
 		long timeOfLastMessageSend;
 		Config conf = new Config(args[0]);
 		AtomicIntegerArray clock = new AtomicIntegerArray(conf.getNumNodes());
-		LinkedBlockingQueue<Message> controlQueue = new LinkedBlockingQueue<>();  //stores incoming control messages
+		ArrayList<LinkedBlockingQueue<Message>> serverQueueList = new ArrayList<LinkedBlockingQueue<Message>>();
+		ArrayList<LinkedBlockingQueue<Message>> controlQueueList = new ArrayList<LinkedBlockingQueue<Message>>();  //stores incoming control messages
+		
 		boolean isActive=false;
 		String thisNodesName=getdcxxName();
 		String[][] nodeIDList =conf.getNodeIDList();
@@ -37,13 +39,11 @@ public class Controller {
 			isActive=true;
 		}
 		
-		LinkedBlockingQueue<Message> serverQueue = new LinkedBlockingQueue<>();  //stores incoming application messages
-		Server s = new Server(Integer.parseInt(nodeIDList[thisNodesID][2]), serverQueue, controlQueue);
-		Thread serverThread = new Thread(s);
-		serverThread.start();
-		//value at x in nodeQueueLocations is the nodeID that the queue at x in clientQueueList is used to send messages to
+
+		//value at x in nodeQueueLocations is the nodeID that the queue at x in nodeQueueLists is used to send messages to
 		int[] nodeQueueLocations = new int[neighborList.get(thisNodesID).size()]; 
 		ArrayList<LinkedBlockingQueue<Message>> clientQueueList = new ArrayList<LinkedBlockingQueue<Message>>();
+	
 		//establish connections between this node and other nodes listed in config file
 		AtomicIntegerArray connectionEstablished = new AtomicIntegerArray(neighborList.size());
 		for(int i=0;i<connectionEstablished.length();i++)  //initialize all values to 0, they will be set to 1 once each socket connection is established in the Client threads
@@ -64,7 +64,9 @@ public class Controller {
 			Thread clientThread= new Thread(c);
 			clientThread.start();
 		}
-		
+		Server s = new Server(Integer.parseInt(nodeIDList[thisNodesID][2]), serverQueueList, controlQueueList, nodeQueueLocations);
+		Thread serverThread = new Thread(s);
+		serverThread.start();
 		
 		int[] thisNodesNeighbors= new int[neighborList.get(thisNodesID).size()];  //contains node ids of neighbors (as ints)
 		for(int i=0;i<thisNodesNeighbors.length;i++)
@@ -84,20 +86,23 @@ public class Controller {
 		while(true)
 		{
 			//check whether have received message
-			mReceived=serverQueue.poll();
-			if(mReceived!=null)
+			for(int i=0;i<serverQueueList.size();i++)
 			{
-				//update this nodes clock
-				for(int i=0;i<mReceived.getTimeStamp().length();i++)
+				mReceived=serverQueueList.get(i).poll();
+				if(mReceived!=null)
 				{
-					clock.set(i,Math.max(clock.get(i), mReceived.getTimeStamp().get(i)));
-				}
-				int receiverIndex=findIndexOfNode(conf,thisNodesName);
-				clock.getAndIncrement(receiverIndex);
-				if(!isActive)
-				{
-					isActive=true;
-					messagesForThisCycle=chooseNumMessages(conf.getMinPerActive(),conf.getMaxPerActive());
+					//update this nodes clock
+					for(int j=0;j<mReceived.getTimeStamp().length();j++)
+					{
+						clock.set(j,Math.max(clock.get(j), mReceived.getTimeStamp().get(j)));
+					}
+					int receiverIndex=findIndexOfNode(conf,thisNodesName);
+					clock.getAndIncrement(receiverIndex);
+					if(!isActive)
+					{
+						isActive=true;
+						messagesForThisCycle=chooseNumMessages(conf.getMinPerActive(),conf.getMaxPerActive());
+					}
 				}
 			}
 			
@@ -130,14 +135,15 @@ public class Controller {
 				}
 			}
 			
+			//check for marker messages
+			
+			
 
 		}
 		
 
 		
-		
-
-		
+			
 		
 	}
 	
