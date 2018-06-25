@@ -64,6 +64,13 @@ public class Controller {
 			Thread clientThread= new Thread(c);
 			clientThread.start();
 		}
+		//populate serverQueueList and ControlQueueList
+		for(int i=0;i<neighborList.size();i++)
+		{
+			serverQueueList.add(new LinkedBlockingQueue<Message>());
+			controlQueueList.add(new LinkedBlockingQueue<Message>());
+		}
+		//create server thread
 		Server s = new Server(Integer.parseInt(nodeIDList[thisNodesID][2]), serverQueueList, controlQueueList, nodeQueueLocations);
 		Thread serverThread = new Thread(s);
 		serverThread.start();
@@ -91,6 +98,12 @@ public class Controller {
 				mReceived=serverQueueList.get(i).poll();
 				if(mReceived!=null)
 				{
+					System.out.print("received message from node "+mReceived.getSender()+" with timestamp ");
+					for(int k=0;k<mReceived.getTimeStamp().length();k++)
+					{
+						System.out.print(mReceived.getTimeStamp().get(k));
+					}
+					System.out.println();
 					//update this nodes clock
 					for(int j=0;j<mReceived.getTimeStamp().length();j++)
 					{
@@ -123,6 +136,12 @@ public class Controller {
 						{
 							clock.getAndIncrement(senderIndex);
 							Message mSend= new Message(thisNodesID, destinationID, "", clock, "APPMSG");
+							System.out.print("received message from node "+mSend.getReceiver()+" with timestamp ");
+							for(int k=0;k<mSend.getTimeStamp().length();k++)
+							{
+								System.out.print(mSend.getTimeStamp().get(k));
+							}
+							System.out.println();
 							try{
 								clientQueueList.get(destinationIndex).put(mSend);
 							}
