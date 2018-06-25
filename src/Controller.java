@@ -45,6 +45,11 @@ public class Controller {
 		int[] nodeQueueLocations = new int[neighborList.get(thisNodesID).size()]; 
 		ArrayList<LinkedBlockingQueue<Message>> clientQueueList = new ArrayList<LinkedBlockingQueue<Message>>();
 		//establish connections between this node and other nodes listed in config file
+		AtomicIntegerArray connectionEstablished = new AtomicIntegerArray(neighborList.size());
+		for(int i=0;i<connectionEstablished.length();i++)  //initialize all values to 0, they will be set to 1 once each socket connection is established in the Client threads
+		{
+			connectionEstablished.set(i, 0);
+		}
 		for(int i=0;i<neighborList.get(thisNodesID).size();i++)  
 		{
 			nodeQueueLocations[i]=Integer.parseInt(neighborList.get(thisNodesID).get(i));
@@ -55,7 +60,7 @@ public class Controller {
 			IDarg=Integer.parseInt(neighborList.get(thisNodesID).get(i));
 			hostNamearg=nodeIDList[IDarg][1]; //find host name of the node we're connecting to
 			listenPortarg=Integer.parseInt(nodeIDList[IDarg][2]);
-			Client c = new Client(IDarg, hostNamearg, listenPortarg, clientQueueList.get(i));
+			Client c = new Client(IDarg, hostNamearg, listenPortarg, clientQueueList.get(i), connectionEstablished, i);
 			Thread clientThread= new Thread(c);
 			clientThread.start();
 		}
@@ -108,25 +113,29 @@ public class Controller {
 				{  
 					if(messagesForThisCycle>0)
 					{
-					//send out a message to a random neighbor
-					timeOfLastMessageSend=System.currentTimeMillis();
-					messagesForThisCycle--;
-					Random rand = new Random();
-					int destinationIndex=rand.nextInt(thisNodesNeighbors.length);
-					int destinationID=thisNodesNeighbors[destinationIndex];
-					int senderIndex=findIndexOfNode(conf, thisNodesName);
-					clock.getAndIncrement(senderIndex);
-					Message mSend= new Message(thisNodesID, destinationID, "", clock);
-					try{
-					clientQueueList.get(destinationIndex).put(mSend);
-					}
-					catch(Exception e) {}
-					System.out.print("sending message to node "+destinationID+". clock is now ");
-					for(int i=0;i<clock.length();i++)
-					{
-						System.out.print(clock.get(i)+" ");
-					}
-					System.out.println(".  ");
+						//send out a message to a random neighbor
+
+						Random rand = new Random();
+						int destinationIndex=rand.nextInt(thisNodesNeighbors.length);
+						int destinationID=thisNodesNeighbors[destinationIndex];
+						int senderIndex=findIndexOfNode(conf, thisNodesName);
+						if(connectionEstablished.get(destinationIndex)==1)
+						{
+							clock.getAndIncrement(senderIndex);
+							Message mSend= new Message(thisNodesID, destinationID, "", clock);
+							try{
+								clientQueueList.get(destinationIndex).put(mSend);
+							}
+							catch(Exception e) {}
+							System.out.print("sending message to node "+destinationID+". clock is now ");
+							for(int i=0;i<clock.length();i++)
+							{
+								System.out.print(clock.get(i)+" ");
+							}
+							System.out.println(".  ");
+							timeOfLastMessageSend=System.currentTimeMillis();
+							messagesForThisCycle--;
+						}
 					}
 				}
 			}
@@ -142,8 +151,7 @@ public class Controller {
 		
 	}
 	
-	
-	
+
 	
 	public void takeSnapshot()
 	{

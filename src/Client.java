@@ -7,6 +7,7 @@ import java.net.UnknownHostException;
 import java.net.ConnectException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicIntegerArray;
 
 
 public class Client implements Runnable{
@@ -15,14 +16,18 @@ public class Client implements Runnable{
 	String hostName;
 	String hostAddr;
 	int listenPort;
+	AtomicIntegerArray connectionEstablished; //stores the status of the connections (1 if connection is established, 0 otherwise)
+	int connectionIndex;
 	LinkedBlockingQueue<Message> clientQueue;
-	public Client(int IDarg, String hostNamearg, int listenPortarg, LinkedBlockingQueue<Message> q)  //info for node being connected to
+	public Client(int IDarg, String hostNamearg, int listenPortarg, LinkedBlockingQueue<Message> q, AtomicIntegerArray connArray, int index)  //info for node being connected to
 	{
 		ID=IDarg;
 		hostName=hostNamearg;
 		listenPort=listenPortarg;	
 		hostAddr=hostName+".utdallas.edu";
 		clientQueue = q;
+		connectionEstablished=connArray;
+		connectionIndex=index;
 	}
 	
     public void run(){
@@ -36,6 +41,7 @@ public class Client implements Runnable{
     			socket = new Socket(hostAddr,listenPort);
     			retry=false;
     			System.out.println("connected to "+hostAddr);
+    			connectionEstablished.set(connectionIndex, 1);
     		}
     		catch(ConnectException e)
     		{

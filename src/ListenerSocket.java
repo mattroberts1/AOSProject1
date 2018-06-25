@@ -23,10 +23,8 @@ public class ListenerSocket implements Runnable {
 			{
 				ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
 				Message m = (Message) ois.readObject();
-				if(m!=null)
-				{
 					serverQueue.put(m);
-				}
+
 			}
 		}
     	catch(Exception e)
