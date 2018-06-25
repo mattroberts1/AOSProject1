@@ -11,12 +11,14 @@ public class Message implements Serializable {
 	int receiverNode=-1;
 	String text="";
 	AtomicIntegerArray timeStamp;
-	public Message(int from, int to, String m, AtomicIntegerArray t)
+	String messageType="";  //APPMSG or CTRLMSG
+	public Message(int from, int to, String m, AtomicIntegerArray time, String type)
 	{
 		senderNode=from;
 		receiverNode=to;
 		text=m;
-		timeStamp=t;
+		timeStamp=time;
+		messageType=type;
 	}
 	public String getText()
 	{
@@ -33,5 +35,9 @@ public class Message implements Serializable {
 	public AtomicIntegerArray getTimeStamp()
 	{
 		return timeStamp;
+	}
+	public String getMessageType()
+	{
+		return messageType;
 	}
 }

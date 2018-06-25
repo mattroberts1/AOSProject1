@@ -46,7 +46,7 @@ public class Client implements Runnable{
     		catch(ConnectException e)
     		{
     			try{
-    			Thread.sleep(1000);
+    			Thread.sleep(100);
     			}
     			catch(Exception x){}
     		}
@@ -55,7 +55,6 @@ public class Client implements Runnable{
     			e.printStackTrace();
     		}
     	}
- 
 
     	try 
     	{

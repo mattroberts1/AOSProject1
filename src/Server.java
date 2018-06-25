@@ -13,11 +13,13 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class Server implements Runnable{   	
     private static ServerSocket server;
     private static int port;  //port server will listen on
-    LinkedBlockingQueue<Message> serverQueue; //queue for passing data back to controller
-    public Server(int p, LinkedBlockingQueue<Message> q)  
+    LinkedBlockingQueue<Message> serverQueue; //queue for passing application messages back to controller
+    LinkedBlockingQueue<Message> controlQueue;
+    public Server(int p, LinkedBlockingQueue<Message> sq, LinkedBlockingQueue<Message> cq)  
     {
     	port=p;
-    	serverQueue=q;
+    	serverQueue=sq;
+    	controlQueue=cq;
     }
     public void run(){
     	
@@ -25,9 +27,9 @@ public class Server implements Runnable{
     		server = new ServerSocket(port);
             while(true)
             {
-            	System.out.println("Server is waiting");
+            	System.out.println("Server is listening for incoming connections");
             	 Socket socket = server.accept();
-            	 new Thread(new ListenerSocket(socket, serverQueue)).start();
+            	 new Thread(new ListenerSocket(socket, serverQueue, controlQueue)).start();
             }
 
     	}

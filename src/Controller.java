@@ -18,7 +18,7 @@ public class Controller {
 		long timeOfLastMessageSend;
 		Config conf = new Config(args[0]);
 		AtomicIntegerArray clock = new AtomicIntegerArray(conf.getNumNodes());
-		
+		LinkedBlockingQueue<Message> controlQueue = new LinkedBlockingQueue<>();  //stores incoming control messages
 		boolean isActive=false;
 		String thisNodesName=getdcxxName();
 		String[][] nodeIDList =conf.getNodeIDList();
@@ -37,8 +37,8 @@ public class Controller {
 			isActive=true;
 		}
 		
-		LinkedBlockingQueue<Message> serverQueue = new LinkedBlockingQueue<>();
-		Server s = new Server(Integer.parseInt(nodeIDList[thisNodesID][2]), serverQueue);
+		LinkedBlockingQueue<Message> serverQueue = new LinkedBlockingQueue<>();  //stores incoming application messages
+		Server s = new Server(Integer.parseInt(nodeIDList[thisNodesID][2]), serverQueue, controlQueue);
 		Thread serverThread = new Thread(s);
 		serverThread.start();
 		//value at x in nodeQueueLocations is the nodeID that the queue at x in clientQueueList is used to send messages to
@@ -79,19 +79,14 @@ public class Controller {
 			messagesForThisCycle=chooseNumMessages(conf.getMinPerActive(),conf.getMaxPerActive());
 		}
 		Message mReceived;
-
+		
+//MAP LOOP
 		while(true)
 		{
 			//check whether have received message
 			mReceived=serverQueue.poll();
 			if(mReceived!=null)
 			{
-				System.out.print("Received message with timestamp: ");
-				for(int i=0;i<clock.length();i++)
-				{
-					System.out.print(mReceived.getTimeStamp().get(i)+" ");
-				}
-				System.out.println(".  ");
 				//update this nodes clock
 				for(int i=0;i<mReceived.getTimeStamp().length();i++)
 				{
@@ -122,17 +117,11 @@ public class Controller {
 						if(connectionEstablished.get(destinationIndex)==1)
 						{
 							clock.getAndIncrement(senderIndex);
-							Message mSend= new Message(thisNodesID, destinationID, "", clock);
+							Message mSend= new Message(thisNodesID, destinationID, "", clock, "APPMSG");
 							try{
 								clientQueueList.get(destinationIndex).put(mSend);
 							}
 							catch(Exception e) {}
-							System.out.print("sending message to node "+destinationID+". clock is now ");
-							for(int i=0;i<clock.length();i++)
-							{
-								System.out.print(clock.get(i)+" ");
-							}
-							System.out.println(".  ");
 							timeOfLastMessageSend=System.currentTimeMillis();
 							messagesForThisCycle--;
 							totalMessagesSent++;
