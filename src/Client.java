@@ -50,18 +50,16 @@ public class Client implements Runnable{
     		}
     	}
  
-    	ObjectOutputStream oos = null;
+
     	try 
     	{
-    		oos = new ObjectOutputStream(socket.getOutputStream());
     		//loop for sending out messages received from controller
     		while(true)
     		{
-    			Message m = clientQueue.poll();
-    			if(m!=null)
-    			{
-    				oos.writeObject(m);
-    			}
+    			ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+    			Message m = clientQueue.take();
+    			oos.writeObject(m);	
+    				
     		}
     	}
     	catch(Exception e)

@@ -68,18 +68,20 @@ public class Controller {
 		}
 		timeOfLastSnapshot=System.currentTimeMillis();
 		timeOfLastMessageSend=System.currentTimeMillis();
-		int messagesForThisActive; 
+		int messagesForThisCycle=0; 
 		if(isActive) //node 0 starts active so need to initialize this 
 		{
-			messagesForThisActive=chooseNumMessages(conf.getMinPerActive(),conf.getMaxPerActive());
+			messagesForThisCycle=chooseNumMessages(conf.getMinPerActive(),conf.getMaxPerActive());
 		}
+		Message mReceived;
+
 		while(true)
 		{
 			//check whether have received message
-			Message mReceived=serverQueue.poll();
+			mReceived=serverQueue.poll();
 			if(mReceived!=null)
 			{
-				System.out.print("Received message with timestamp");
+				System.out.print("Received message with timestamp: ");
 				for(int i=0;i<clock.length();i++)
 				{
 					System.out.print(mReceived.getTimeStamp().get(i)+" ");
@@ -95,7 +97,7 @@ public class Controller {
 				if(!isActive)
 				{
 					isActive=true;
-					messagesForThisActive=chooseNumMessages(conf.getMinPerActive(),conf.getMaxPerActive());
+					messagesForThisCycle=chooseNumMessages(conf.getMinPerActive(),conf.getMaxPerActive());
 				}
 			}
 			
@@ -104,8 +106,11 @@ public class Controller {
 			{
 				if(System.currentTimeMillis()>(timeOfLastMessageSend+conf.getMinSendDelay()))  
 				{  
+					if(messagesForThisCycle>0)
+					{
 					//send out a message to a random neighbor
 					timeOfLastMessageSend=System.currentTimeMillis();
+					messagesForThisCycle--;
 					Random rand = new Random();
 					int destinationIndex=rand.nextInt(thisNodesNeighbors.length);
 					int destinationID=thisNodesNeighbors[destinationIndex];
@@ -122,6 +127,7 @@ public class Controller {
 						System.out.print(clock.get(i)+" ");
 					}
 					System.out.println(".  ");
+					}
 				}
 			}
 			
