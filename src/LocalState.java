@@ -30,6 +30,7 @@ public void setStateIndex(int index, int value)
 {
 	stateInfo[index]=value;
 }
+
 public int[] getStateInfo()
 {
 	return stateInfo;

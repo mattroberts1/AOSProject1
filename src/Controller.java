@@ -21,7 +21,7 @@ public class Controller {
 		ArrayList<LinkedBlockingQueue<Message>> clientQueueList = new ArrayList<LinkedBlockingQueue<Message>>();
 		ArrayList<LinkedBlockingQueue<Message>> serverQueueList = new ArrayList<LinkedBlockingQueue<Message>>();
 
-		
+		int nextSnapshotNumber=0; //this will only be used by node 0
 		boolean isActive=false;
 		String thisNodesName=getdcxxName();
 		String[][] nodeIDList =conf.getNodeIDList();
@@ -94,21 +94,53 @@ public class Controller {
 		ArrayList<Boolean> beganSnapshot= new ArrayList<Boolean>(); //index is true if this node has received a marker message for that iteration of snapshot
 
 //MAIN LOOP
-		Message mReceived;
-		while(true)
+		
+		boolean keepGoing=true;
+		while(keepGoing)
 		{
+			//check whether this node is node 0 and if so whether it's time to start a snapshot
+			if(thisNodesID==0&&System.currentTimeMillis()>timeOfLastSnapshot+conf.getSnapshotDelay())
+			{
+				System.out.println("node 0 initiating snapshot");
+				timeOfLastSnapshot=System.currentTimeMillis();//reset timer for next snapshot
+				//send out marker messages
+				for(int i=0;i<clientQueueList.size();i++)
+				{
+					Message marker = new Message(thisNodesID, nodeQueueLocations[i],Integer.toString(nextSnapshotNumber),clock, "MARKMSG",null);
+					try {
+						clientQueueList.get(i).put(marker);
+					}
+					catch(Exception e) {e.printStackTrace();}	
+				}
+				//take snapshot on node 0 (since it won't be started by receipt of a marker msg like on other nodes)
+				beganSnapshot.add(true);
+				channelsMarkedList.add(new boolean[neighborList.size()]);
+				//instantly complete snapshot for node 0 by setting all channels to marked
+				for(int i=0;i<channelsMarkedList.get(nextSnapshotNumber).length;i++)
+				{
+					channelsMarkedList.get(nextSnapshotNumber)[i]=true;
+				}
+				//save clock of node 0 to snapshot
+				snapShots.add(new LocalState(new int[conf.getNumNodes()]));
+				for(int i=0;i<clock.length();i++)
+				{
+					snapShots.get(nextSnapshotNumber).setStateIndex(i, clock.get(i));
+				}
+				nextSnapshotNumber++; //increment counter for next time a snapshot is started
+			}
+			
 			//check whether have received message
 			for(int i=0;i<serverQueueList.size();i++)
 			{
 				while(serverQueueList.get(i).peek()!=null&&serverQueueList.get(i).peek().getMessageType().equals("APPMSG")) 
 				{
-					mReceived=serverQueueList.get(i).poll();
+					Message mReceived=serverQueueList.get(i).poll();
 					if(mReceived!=null)
 					{
 						System.out.print("received application message from node "+mReceived.getSender()+" with timestamp ");
 						for(int k=0;k<mReceived.getTimeStamp().length();k++)
 						{
-							System.out.print(mReceived.getTimeStamp().get(k));
+							System.out.print(mReceived.getTimeStamp().get(k)+" ");
 						}
 						System.out.println();
 						//update this nodes clock
@@ -165,7 +197,7 @@ public class Controller {
 							System.out.print("sent application message to node "+mSend.getReceiver()+" with timestamp ");
 							for(int k=0;k<mSend.getTimeStamp().length();k++)
 							{
-								System.out.print(mSend.getTimeStamp().get(k));
+								System.out.print(mSend.getTimeStamp().get(k)+" ");
 							}
 							System.out.println();
 							try{
@@ -244,22 +276,33 @@ public class Controller {
 							snapShots.get(iteration).setCompletedStatus(true);
 //TODO: SEND LOCAL STATE REPORT TO NODE 0
 						}	
-					}//end not first marker in iteration
-					
-					
-					
-					
-				} //endif all marker messages
+					}//end else loop for not first marker in iteration
+				} //end if for all marker messages
+			}//end for loop for serverQueue
+
+			if(System.currentTimeMillis()>timeOfLastMessageSend+10000)
+			{
+				keepGoing=false;
 			}
-		}
+		}//end main while loop
+//TEST CODE, PRINT OUT ENTIRE SNAPSHOT RECORD		
+			System.out.println("Printing out snapshot record");
+			for(int i=0;i<snapShots.size();i++)
+			{
+				
+				int[] snap=snapShots.get(i).getStateInfo();
+				for(int j=0;j<snap.length;j++)
+				{
+					System.out.print(snap[j]+" ");
+				}
+				System.out.println();
+			}
+		
+
+		
 //TODO: add termination procedures to all nodes and detection to node 0
 	}
 
-	
-	public void takeSnapshot()
-	{
-		
-	}
 
 	
 	//returns index of node in neighbor list (same as in queue locations list)
