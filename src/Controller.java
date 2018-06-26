@@ -93,7 +93,7 @@ public class Controller {
 		//received after that snapshot began will be taken into account in the corresponding array
 		ArrayList<Boolean> beganSnapshot= new ArrayList<Boolean>(); //index is true if this node has received a marker message for that iteration of snapshot
 
-//MAP LOOP
+//MAIN LOOP
 		Message mReceived;
 		while(true)
 		{
@@ -117,9 +117,26 @@ public class Controller {
 							clock.set(j,Math.max(clock.get(j), mReceived.getTimeStamp().get(j)));
 						}
 						int receiverIndex=findIndexOfNode(conf,thisNodesName);
-						clock.getAndIncrement(receiverIndex);
-//TODO: for each active snapshot process,  if haven't already received a marker on channel appmsg came in on, update the stored localstate
 						
+						// for each active snapshot process,  if haven't already received a marker on channel appmsg came in on, update the stored localstate
+						for(int j=0;j<beganSnapshot.size();j++)
+						{
+							//check if snapshot is active (started but not completed) before iterating through channels
+							if(beganSnapshot.get(j)&&!snapShots.get(j).getCompletedStatus())
+							{
+								//check that channel message came in on isn't marked yet for this snapshot
+								if(!channelsMarkedList.get(j)[findChannelIndex(nodeQueueLocations,mReceived.getSender())])
+								{
+									//merge timestamp in message with one in snapshot state info
+									for(int k=0;k<snapShots.get(j).getStateInfo().length;k++)
+									{
+									int max=Math.max(clock.get(k), mReceived.getTimeStamp().get(k));
+									snapShots.get(j).setStateIndex(k, max);
+									}
+								}
+							}
+						}
+						clock.getAndIncrement(receiverIndex);
 						if(!isActive)
 						{
 							isActive=true;
@@ -225,7 +242,7 @@ public class Controller {
 						if(done)
 						{
 							snapShots.get(iteration).setCompletedStatus(true);
-	//TODO: SEND LOCAL STATE REPORT TO NODE 0
+//TODO: SEND LOCAL STATE REPORT TO NODE 0
 						}	
 					}//end not first marker in iteration
 					
@@ -235,6 +252,7 @@ public class Controller {
 				} //endif all marker messages
 			}
 		}
+//TODO: add termination procedures to all nodes and detection to node 0
 	}
 
 	
