@@ -11,14 +11,13 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class ListenerSocket implements Runnable {
 	Socket socket; //socket connected to client of other process
-	ArrayList<LinkedBlockingQueue<Message>> serverQueueList; //queue for received application messages
-	ArrayList<LinkedBlockingQueue<Message>> controlQueueList;  //queue for received control messages 
+	ArrayList<LinkedBlockingQueue<Message>> serverQueueList; //queue for received messages messages
+
 	int[] nodeQueueLocations;
-	public ListenerSocket(Socket s, ArrayList<LinkedBlockingQueue<Message>> sql, ArrayList<LinkedBlockingQueue<Message>> cql, int[] nql)
+	public ListenerSocket(Socket s, ArrayList<LinkedBlockingQueue<Message>> sql, int[] nql)
 	{
 		socket=s;
 		serverQueueList=sql;
-		controlQueueList=cql;
 		nodeQueueLocations=nql;
 	}
 	public void run()
@@ -36,14 +35,7 @@ public class ListenerSocket implements Runnable {
 						queueIndex=i;
 					}
 				}
-				if(m.getMessageType().equals("APPMSG"))
-					{
 						serverQueueList.get(queueIndex).put(m);
-					}
-				if(m.getMessageType().equals("CTRLMSG"))
-				{
-					controlQueueList.get(queueIndex).put(m);
-				}
 
 			}
 		}

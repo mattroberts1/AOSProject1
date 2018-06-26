@@ -15,13 +15,11 @@ public class Server implements Runnable{
     private static ServerSocket server;
     private static int port;  //port server will listen on
     ArrayList<LinkedBlockingQueue<Message>> serverQueueList; //queue for passing application messages back to controller
-    ArrayList<LinkedBlockingQueue<Message>> controlQueueList;
     int[] nodeQueueLocations;
-    public Server(int p, ArrayList<LinkedBlockingQueue<Message>> sql, ArrayList<LinkedBlockingQueue<Message>> cql, int[] nql)  
+    public Server(int p, ArrayList<LinkedBlockingQueue<Message>> sql, int[] nql)  
     {
     	port=p;
     	serverQueueList=sql;
-    	controlQueueList=cql;
     	nodeQueueLocations=nql;
     }
     public void run(){
@@ -32,7 +30,7 @@ public class Server implements Runnable{
             {
             	System.out.println("Server is listening for incoming connections");
             	 Socket socket = server.accept();
-            	 new Thread(new ListenerSocket(socket, serverQueueList, controlQueueList, nodeQueueLocations)).start();
+            	 new Thread(new ListenerSocket(socket, serverQueueList, nodeQueueLocations)).start();
             }
 
     	}
