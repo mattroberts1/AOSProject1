@@ -4,7 +4,7 @@ int[] stateInfo;
 int nodeNumber;
 boolean snapshotCompleted;
 boolean snapshotTransmitted;
-boolean activityStatus;
+boolean activityStatus; //whether the node is active or passive (true is active)
 int iterationNumber;
 
 public LocalState(int[] emptyArray, int n, int i)
