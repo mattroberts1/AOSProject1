@@ -39,10 +39,7 @@ public class ListenerSocket implements Runnable {
 
 			}
 		}
-    	catch(Exception e)
-    	{
-    		e.printStackTrace();
-    	}
+    	catch(Exception e){}
 	}
 
 }

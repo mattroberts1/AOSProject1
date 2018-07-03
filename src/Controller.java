@@ -358,7 +358,7 @@ public class Controller {
 					{
 						Message m=serverQueueList.get(i).poll();
 						LocalState report=m.getStateReport();
-						int iteration=Integer.parseInt(m.getText());
+						int iteration=report.getIterationNumber();
 						collectedSnapshots.get(iteration)[report.getNodeNumber()]=report; 
 					}
 				}
