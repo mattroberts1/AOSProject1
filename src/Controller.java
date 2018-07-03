@@ -88,10 +88,11 @@ public class Controller {
 		TreeMaker t = new TreeMaker(conf);
 		Graph tree=t.createTree();
 		Vertex thisNodesVertex=tree.getVertex(tree.findVertexIndex(thisNodesID));
+		LinkedBlockingQueue<Message> upStreamClientQueue=null;
 		if(thisNodesID!=0)
 		{
 			int upStreamIndex=findChannelIndex(nodeQueueLocations,thisNodesVertex.getUpStreamNode().getNumber());
-			LinkedBlockingQueue<Message> upStreamClientQueue=clientQueueList.get(upStreamIndex);
+			upStreamClientQueue=clientQueueList.get(upStreamIndex);
 		}
 		ArrayList<LinkedBlockingQueue<Message>> downStreamClientQueueList = new ArrayList<LinkedBlockingQueue<Message>>();
 		//number at index x is the id of node the queue at x in downStreamClientQueueList connects to
@@ -302,21 +303,42 @@ public class Controller {
 				} //end if for all marker messages
 			}//end for loop for serverQueue
 
+//TODO: check if there are any completed snapshots to send upstream
+//TODO: add termination procedures to all nodes and detection to node 0
+//TODO: collect and store reports at node 0
 			
-
 			
+			
+			
+			
+			//if received a statereport and this isn't node 0 pass it upstream
+			if(thisNodesID!=0)
+			{
+				for(int i=0;i<serverQueueList.size();i++)
+				{
+					if(serverQueueList.get(i).peek()!=null &&serverQueueList.get(i).peek().getMessageType().equals("STATEREPORT"))
+					{
+						Message m=serverQueueList.get(i).poll();
+						try {
+						upStreamClientQueue.put(m);
+						}
+						catch(Exception e) {e.printStackTrace();}
+					}
+				}
+			}
 			//if terminate message is received, ends loop and propagates terminate command
 			for(int i=0;i<serverQueueList.size();i++)
 			{
 				if(serverQueueList.get(i).peek()!=null &&serverQueueList.get(i).peek().getMessageType().equals("TERMINATE"))
 				{
 					keepGoing=false;
-					for(int j=0;j<clientQueueList.size();j++) 
+					//send terminate message to downstream nodes
+					for(int j=0;j<downStreamClientQueueList.size();j++) 
 					{
-						Message terminator= new Message(thisNodesID, nodeQueueLocations[j], "", clock, "TERMINATE",null);
+						Message terminator= new Message(thisNodesID, downStreamClientQueueIDs.get(j), "", clock, "TERMINATE",null);
 						try 
 						{
-							clientQueueList.get(j).put(terminator);	
+							downStreamClientQueueList.get(j).put(terminator);	
 						}
 						catch(Exception e) {e.printStackTrace();}
 					}
@@ -339,7 +361,7 @@ public class Controller {
 		
 
 		
-//TODO: add termination procedures to all nodes and detection to node 0
+
 	}
 
 
