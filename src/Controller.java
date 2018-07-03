@@ -8,8 +8,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.*;
 import java.util.Random;
-
-
 public class Controller {
 
 	public static void main(String[] args) {
@@ -79,22 +77,42 @@ public class Controller {
 		{
 			thisNodesNeighbors[i]=Integer.parseInt(neighborList.get(thisNodesID).get(i));
 		}
-		timeOfLastSnapshot=System.currentTimeMillis();
-		timeOfLastMessageSend=System.currentTimeMillis();
+
 		int messagesForThisCycle=0; 
 		if(isActive) //node 0 starts active so need to initialize this 
 		{
 			messagesForThisCycle=chooseNumMessages(conf.getMinPerActive(),conf.getMaxPerActive());
 		}
 
+		//find upstream and downstream nodes and store queues so they can be referenced later (remember no upstream node for node 0)
+		TreeMaker t = new TreeMaker(conf);
+		Graph tree=t.createTree();
+		Vertex thisNodesVertex=tree.getVertex(tree.findVertexIndex(thisNodesID));
+		int upStreamIndex=findChannelIndex(nodeQueueLocations,thisNodesVertex.getUpStreamNode().getNumber());
+		LinkedBlockingQueue<Message> upStreamClientQueue=clientQueueList.get(upStreamIndex);
+		ArrayList<LinkedBlockingQueue<Message>> downStreamClientQueueList = new ArrayList<LinkedBlockingQueue<Message>>();
+		//number at index x is the id of node the queue at x in downStreamClientQueueList connects to
+		ArrayList<Integer> downStreamClientQueueIDs = new ArrayList<Integer>();
+		for(int i=0;i<thisNodesVertex.getDownStreamNodes().size();i++)
+		{
+			int downStreamNodeID=thisNodesVertex.getDownStreamNodes().get(i).getNumber();
+			int downStreamNodeIndex=findChannelIndex(nodeQueueLocations, downStreamNodeID);
+			downStreamClientQueueList.add(clientQueueList.get(downStreamNodeIndex));
+			downStreamClientQueueIDs.add(downStreamNodeID);
+		}
+		
+		
+		
+		
+//MAIN LOOP		
+		
 		ArrayList<boolean[]> channelsMarkedList = new ArrayList<boolean[]>();  //each index in an array is true if that channel has received a marker for that snapshot
 		//ie if channelsMarkedList.get(4)[1] is true the channel at index 1 has received a marker for the 5th snapshot
 		ArrayList<LocalState> snapShots = new ArrayList<LocalState>();//each array is a saved clock (a snapshot), once that snapshot is completed, any messages
 		//received after that snapshot began will be taken into account in the corresponding array
 		ArrayList<Boolean> beganSnapshot= new ArrayList<Boolean>(); //index is true if this node has received a marker message for that iteration of snapshot
-
-//MAIN LOOP
-		
+		timeOfLastSnapshot=System.currentTimeMillis();
+		timeOfLastMessageSend=System.currentTimeMillis();
 		boolean keepGoing=true;
 		while(keepGoing)
 		{
@@ -274,15 +292,33 @@ public class Controller {
 						if(done)
 						{
 							snapShots.get(iteration).setCompletedStatus(true);
-//TODO: SEND LOCAL STATE REPORT TO NODE 0
+//TODO: SEND LOCAL STATE REPORT TO NODE 0 (add localstate object to message instead of just array so can also pass node active/passive status)
+							
 						}	
 					}//end else loop for not first marker in iteration
 				} //end if for all marker messages
 			}//end for loop for serverQueue
 
-			if(System.currentTimeMillis()>timeOfLastMessageSend+10000)
+			
+
+			
+			//if terminate message is received, ends loop and propagates terminate command
+			for(int i=0;i<serverQueueList.size();i++)
 			{
-				keepGoing=false;
+				if(serverQueueList.get(i).peek()!=null &&serverQueueList.get(i).peek().getMessageType().equals("TERMINATE"))
+				{
+					keepGoing=false;
+					for(int j=0;j<clientQueueList.size();j++) 
+					{
+						Message terminator= new Message(thisNodesID, nodeQueueLocations[j], "", clock, "TERMINATE",null);
+						try 
+						{
+							clientQueueList.get(j).put(terminator);	
+						}
+						catch(Exception e) {e.printStackTrace();}
+					}
+					break;  //send out terminate messages to all neighbors once then exit for loop
+				}
 			}
 		}//end main while loop
 //TEST CODE, PRINT OUT ENTIRE SNAPSHOT RECORD		

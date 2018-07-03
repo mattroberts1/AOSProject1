@@ -1,13 +1,15 @@
 
-public class LocalState  {
+public class LocalState {
 int[] stateInfo;
 boolean snapshotCompleted;
 boolean snapshotTransmitted;
+boolean activityStatus;
 
 public LocalState(int[] emptyArray)
 {
 	snapshotCompleted=false;
 	snapshotTransmitted=false;
+	activityStatus=false;
 	stateInfo=emptyArray;
 }
 public boolean getCompletedStatus()
@@ -35,4 +37,15 @@ public int[] getStateInfo()
 {
 	return stateInfo;
 }
+
+public boolean getActivityStatus()
+{
+	return activityStatus;
+}
+
+public void setActivityStatus(boolean status) 
+{
+	activityStatus = status;
+}
+
 }
