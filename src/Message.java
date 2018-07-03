@@ -9,8 +9,8 @@ public class Message implements Serializable {
 	String text="";  //text of marker message will be the iteration of the snapshot algorithm it belongs to
 	AtomicIntegerArray timeStamp;
 	String messageType="";  //APPMSG or MARKMSG or STATEREPORT or TERMINATE
-	int[] stateReport=null;
-	public Message(int from, int to, String m, AtomicIntegerArray time, String type, int[] sR)
+	LocalState stateReport=null;
+	public Message(int from, int to, String m, AtomicIntegerArray time, String type, LocalState sR)
 	{
 		senderNode=from;
 		receiverNode=to;
@@ -42,7 +42,7 @@ public class Message implements Serializable {
 	{
 		return messageType;
 	}
-	public int[] getStateReport()
+	public LocalState getStateReport()
 	{
 		return stateReport;
 	}

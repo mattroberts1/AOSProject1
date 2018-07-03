@@ -1,16 +1,18 @@
-
-public class LocalState {
+import java.io.Serializable;
+public class LocalState implements Serializable{
 int[] stateInfo;
+int nodeNumber;
 boolean snapshotCompleted;
 boolean snapshotTransmitted;
 boolean activityStatus;
 
-public LocalState(int[] emptyArray)
+public LocalState(int[] emptyArray, int n)
 {
 	snapshotCompleted=false;
 	snapshotTransmitted=false;
 	activityStatus=false;
 	stateInfo=emptyArray;
+	nodeNumber=n;
 }
 public boolean getCompletedStatus()
 {
@@ -46,6 +48,10 @@ public boolean getActivityStatus()
 public void setActivityStatus(boolean status) 
 {
 	activityStatus = status;
+}
+public int getNodeNumber()
+{
+	return nodeNumber;
 }
 
 }

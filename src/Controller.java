@@ -88,9 +88,11 @@ public class Controller {
 		TreeMaker t = new TreeMaker(conf);
 		Graph tree=t.createTree();
 		Vertex thisNodesVertex=tree.getVertex(tree.findVertexIndex(thisNodesID));
+		int upStreamNodeID=0;
 		LinkedBlockingQueue<Message> upStreamClientQueue=null;
 		if(thisNodesID!=0)
 		{
+			upStreamNodeID=thisNodesVertex.getUpStreamNode().getNumber();
 			int upStreamIndex=findChannelIndex(nodeQueueLocations,thisNodesVertex.getUpStreamNode().getNumber());
 			upStreamClientQueue=clientQueueList.get(upStreamIndex);
 		}
@@ -143,7 +145,7 @@ public class Controller {
 					channelsMarkedList.get(nextSnapshotNumber)[i]=true;
 				}
 				//save clock of node 0 to snapshot
-				snapShots.add(new LocalState(new int[conf.getNumNodes()]));
+				snapShots.add(new LocalState(new int[conf.getNumNodes()],thisNodesID));
 				for(int i=0;i<clock.length();i++)
 				{
 					snapShots.get(nextSnapshotNumber).setStateIndex(i, clock.get(i));
@@ -249,7 +251,7 @@ public class Controller {
 					{
 						beganSnapshot.add(false);
 						channelsMarkedList.add(new boolean[neighborList.size()]);
-						snapShots.add(new LocalState(new int[conf.getNumNodes()]));
+						snapShots.add(new LocalState(new int[conf.getNumNodes()],thisNodesID));
 					}
 					if(!beganSnapshot.get(iteration))//have not yet received marker for this iteration of snapshot
 					{
@@ -295,21 +297,33 @@ public class Controller {
 						}
 						if(done)
 						{
-							snapShots.get(iteration).setCompletedStatus(true);
-//TODO: SEND LOCAL STATE REPORT TO NODE 0 (add localstate object to message instead of just array so can also pass node active/passive status)
-							
+							snapShots.get(iteration).setCompletedStatus(true);						
 						}	
 					}//end else loop for not first marker in iteration
 				} //end if for all marker messages
 			}//end for loop for serverQueue
 
-//TODO: check if there are any completed snapshots to send upstream
 //TODO: add termination procedures to all nodes and detection to node 0
 //TODO: collect and store reports at node 0
 			
 			
-			
-			
+			//check if there are any completed state reports to transmit (that haven't already been sent out)
+			if(thisNodesID!=0)
+			{
+				for(int i=0;i<snapShots.size();i++)
+				{
+					if(snapShots.get(i).getCompletedStatus()==true&&snapShots.get(i).getTransmittedStatus()==false)
+					{
+						Message m= new Message(thisNodesID,upStreamNodeID,"",clock,"STATEREPORT",snapShots.get(i));
+						try 
+						{
+							upStreamClientQueue.put(m);
+						}
+						catch(Exception e) {e.printStackTrace();}
+						snapShots.get(i).setTransmittedStatus(true);
+					}
+				}
+			}
 			
 			//if received a statereport and this isn't node 0 pass it upstream
 			if(thisNodesID!=0)
@@ -346,11 +360,11 @@ public class Controller {
 				}
 			}
 		}//end main while loop
+//TODO: remove test code
 //TEST CODE, PRINT OUT ENTIRE SNAPSHOT RECORD		
 			System.out.println("Printing out snapshot record");
 			for(int i=0;i<snapShots.size();i++)
 			{
-				
 				int[] snap=snapShots.get(i).getStateInfo();
 				for(int j=0;j<snap.length;j++)
 				{
@@ -358,9 +372,6 @@ public class Controller {
 				}
 				System.out.println();
 			}
-		
-
-		
 
 	}
 
