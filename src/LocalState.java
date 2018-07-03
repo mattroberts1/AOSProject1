@@ -5,14 +5,17 @@ int nodeNumber;
 boolean snapshotCompleted;
 boolean snapshotTransmitted;
 boolean activityStatus;
+int iterationNumber;
 
-public LocalState(int[] emptyArray, int n)
+public LocalState(int[] emptyArray, int n, int i)
 {
 	snapshotCompleted=false;
 	snapshotTransmitted=false;
 	activityStatus=false;
 	stateInfo=emptyArray;
 	nodeNumber=n;
+	iterationNumber=i;
+	
 }
 public boolean getCompletedStatus()
 {
@@ -53,5 +56,8 @@ public int getNodeNumber()
 {
 	return nodeNumber;
 }
-
+public int getIterationNumber()
+{
+	return iterationNumber;
+}
 }

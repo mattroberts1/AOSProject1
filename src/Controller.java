@@ -18,7 +18,8 @@ public class Controller {
 		AtomicIntegerArray clock = new AtomicIntegerArray(conf.getNumNodes());
 		ArrayList<LinkedBlockingQueue<Message>> clientQueueList = new ArrayList<LinkedBlockingQueue<Message>>();
 		ArrayList<LinkedBlockingQueue<Message>> serverQueueList = new ArrayList<LinkedBlockingQueue<Message>>();
-
+		ArrayList<LocalState[]> collectedSnapshots=new ArrayList<LocalState[]>(); //arraylist of arrays of localstates to store snapshot info in node 0
+		//array at index x in list is x'th snapshot
 		int nextSnapshotNumber=0; //this will only be used by node 0
 		boolean isActive=false;
 		String thisNodesName=getdcxxName();
@@ -43,7 +44,7 @@ public class Controller {
 		
 	
 		//establish connections between this node and other nodes listed in config file
-		AtomicIntegerArray connectionEstablished = new AtomicIntegerArray(neighborList.size());
+		AtomicIntegerArray connectionEstablished = new AtomicIntegerArray(neighborList.get(thisNodesID).size());
 		for(int i=0;i<connectionEstablished.length();i++)  //initialize all values to 0, they will be set to 1 once each socket connection is established in the Client threads
 		{
 			connectionEstablished.set(i, 0);
@@ -63,7 +64,7 @@ public class Controller {
 			clientThread.start();
 		}
 		//populate serverQueueList and ControlQueueList
-		for(int i=0;i<neighborList.size();i++)
+		for(int i=0;i<neighborList.get(thisNodesID).size();i++)
 		{
 			serverQueueList.add(new LinkedBlockingQueue<Message>());
 		}
@@ -111,7 +112,7 @@ public class Controller {
 		
 		
 //MAIN LOOP		
-		
+
 		ArrayList<boolean[]> channelsMarkedList = new ArrayList<boolean[]>();  //each index in an array is true if that channel has received a marker for that snapshot
 		//ie if channelsMarkedList.get(4)[1] is true the channel at index 1 has received a marker for the 5th snapshot
 		ArrayList<LocalState> snapShots = new ArrayList<LocalState>();//each array is a saved clock (a snapshot), once that snapshot is completed, any messages
@@ -125,6 +126,7 @@ public class Controller {
 			//check whether this node is node 0 and if so whether it's time to start a snapshot
 			if(thisNodesID==0&&System.currentTimeMillis()>timeOfLastSnapshot+conf.getSnapshotDelay())
 			{
+				collectedSnapshots.add(new LocalState[clock.length()]);
 				System.out.println("node 0 initiating snapshot");
 				timeOfLastSnapshot=System.currentTimeMillis();//reset timer for next snapshot
 				//send out marker messages
@@ -138,18 +140,19 @@ public class Controller {
 				}
 				//take snapshot on node 0 (since it won't be started by receipt of a marker msg like on other nodes)
 				beganSnapshot.add(true);
-				channelsMarkedList.add(new boolean[neighborList.size()]);
+				channelsMarkedList.add(new boolean[neighborList.get(thisNodesID).size()]);
 				//instantly complete snapshot for node 0 by setting all channels to marked
 				for(int i=0;i<channelsMarkedList.get(nextSnapshotNumber).length;i++)
 				{
 					channelsMarkedList.get(nextSnapshotNumber)[i]=true;
 				}
 				//save clock of node 0 to snapshot
-				snapShots.add(new LocalState(new int[conf.getNumNodes()],thisNodesID));
+				snapShots.add(new LocalState(new int[conf.getNumNodes()],thisNodesID,nextSnapshotNumber));
 				for(int i=0;i<clock.length();i++)
 				{
 					snapShots.get(nextSnapshotNumber).setStateIndex(i, clock.get(i));
 				}
+				collectedSnapshots.get(nextSnapshotNumber)[thisNodesID]=snapShots.get(nextSnapshotNumber);
 				nextSnapshotNumber++; //increment counter for next time a snapshot is started
 			}
 			
@@ -250,8 +253,9 @@ public class Controller {
 					while(beganSnapshot.size()<=iteration)  //make sure we have space in lists, will only run if iteration would exceed current highest index
 					{
 						beganSnapshot.add(false);
-						channelsMarkedList.add(new boolean[neighborList.size()]);
-						snapShots.add(new LocalState(new int[conf.getNumNodes()],thisNodesID));
+						channelsMarkedList.add(new boolean[neighborList.get(thisNodesID).size()]);
+						int temp=snapShots.size();//the iteration number for the next snapshot
+						snapShots.add(new LocalState(new int[conf.getNumNodes()],thisNodesID,temp));
 					}
 					if(!beganSnapshot.get(iteration))//have not yet received marker for this iteration of snapshot
 					{
@@ -309,8 +313,8 @@ public class Controller {
 			}//end for loop for serverQueue
 
 //TODO: add termination procedures to all nodes and detection to node 0
-//TODO: collect and store reports at node 0
-			
+//TODO: collect and store reports at node 0 (0 currently stores its own snapshot but not those passed by other nodes)
+//TODO NOTE: NODE 0 GETS STUCK BECAUSE OF STATEREPORTS NOT BEING REMOVED FROM QUEUE, FINISH CODE WILL FIX THIS
 			
 			//check if there are any completed state reports to transmit (that haven't already been sent out)
 			if(thisNodesID!=0)
