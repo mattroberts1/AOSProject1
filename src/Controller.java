@@ -19,7 +19,7 @@ public class Controller {
 		ArrayList<LinkedBlockingQueue<Message>> clientQueueList = new ArrayList<LinkedBlockingQueue<Message>>();
 		ArrayList<LinkedBlockingQueue<Message>> serverQueueList = new ArrayList<LinkedBlockingQueue<Message>>();
 		ArrayList<LocalState[]> collectedSnapshots=new ArrayList<LocalState[]>(); //arraylist of arrays of localstates to store snapshot info in node 0
-		//array at index x in list is x'th snapshot
+		//array at index x in list is x'th snapshot, localstate at index i in x is for process with ID i
 		int nextSnapshotNumber=0; //this will only be used by node 0
 		boolean isActive=false;
 		String thisNodesName=getdcxxName();
@@ -313,8 +313,8 @@ public class Controller {
 			}//end for loop for serverQueue
 
 //TODO: add termination procedures to all nodes and detection to node 0
-//TODO: collect and store reports at node 0 (0 currently stores its own snapshot but not those passed by other nodes)
-//TODO NOTE: NODE 0 GETS STUCK BECAUSE OF STATEREPORTS NOT BEING REMOVED FROM QUEUE, FINISH CODE WILL FIX THIS
+
+
 			
 			//check if there are any completed state reports to transmit (that haven't already been sent out)
 			if(thisNodesID!=0)
@@ -333,7 +333,6 @@ public class Controller {
 					}
 				}
 			}
-			
 			//if received a statereport and this isn't node 0 pass it upstream
 			if(thisNodesID!=0)
 			{
@@ -349,6 +348,24 @@ public class Controller {
 					}
 				}
 			}
+			
+			//if received a statereport and this is node 0 store it in collectedSnapshots
+			if(thisNodesID==0)
+			{
+				for(int i=0;i<serverQueueList.size();i++)
+				{
+					if(serverQueueList.get(i).peek()!=null &&serverQueueList.get(i).peek().getMessageType().equals("STATEREPORT"))
+					{
+						Message m=serverQueueList.get(i).poll();
+						LocalState report=m.getStateReport();
+						int iteration=Integer.parseInt(m.getText());
+						collectedSnapshots.get(iteration)[report.getNodeNumber()]=report; 
+					}
+				}
+			}
+			
+			
+			
 			//if terminate message is received, ends loop and propagates terminate command
 			for(int i=0;i<serverQueueList.size();i++)
 			{
