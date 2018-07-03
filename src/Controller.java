@@ -88,8 +88,11 @@ public class Controller {
 		TreeMaker t = new TreeMaker(conf);
 		Graph tree=t.createTree();
 		Vertex thisNodesVertex=tree.getVertex(tree.findVertexIndex(thisNodesID));
-		int upStreamIndex=findChannelIndex(nodeQueueLocations,thisNodesVertex.getUpStreamNode().getNumber());
-		LinkedBlockingQueue<Message> upStreamClientQueue=clientQueueList.get(upStreamIndex);
+		if(thisNodesID!=0)
+		{
+			int upStreamIndex=findChannelIndex(nodeQueueLocations,thisNodesVertex.getUpStreamNode().getNumber());
+			LinkedBlockingQueue<Message> upStreamClientQueue=clientQueueList.get(upStreamIndex);
+		}
 		ArrayList<LinkedBlockingQueue<Message>> downStreamClientQueueList = new ArrayList<LinkedBlockingQueue<Message>>();
 		//number at index x is the id of node the queue at x in downStreamClientQueueList connects to
 		ArrayList<Integer> downStreamClientQueueIDs = new ArrayList<Integer>();
