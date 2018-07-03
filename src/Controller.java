@@ -280,6 +280,11 @@ public class Controller {
 								catch(Exception e) {}
 							}
 						}
+						if(clientQueueList.size()==1)
+						{
+							//if only one other node then first marker is also last
+							snapShots.get(iteration).setCompletedStatus(true); 
+						}
 					}//end if loop for first marker in iteration
 					
 					else //we have already started current iteration of snapshot algorithm
