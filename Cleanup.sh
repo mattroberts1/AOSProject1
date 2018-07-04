@@ -1,31 +1,38 @@
-netid=txt171230	
-PROJDIR=$pwd
-CONFIG=$PROJDIR/Config.txt
-BINDIR=$PROJDIR/bin
-PROG=Controller.java
+#!/bin/bash
+
+
+# Change this to your netid
+netid=mdr140430
+
+#
+# Root directory of your project
+PROJDIR=$HOME/AOSProject
+
+#
+# Directory where the config file is located on your local system
+CONFIGLOCAL=$HOME/AOSProject/config.txt
 
 n=0
 
-cat $CONFIG | sed -e "s/#.*//" | sed -e "/^\s*$/d" |
+# sed commands to ignore lines starting with # or _
+cat $CONFIGLOCAL | sed -e "s/#.*//" | sed -e "/^\s*$/d" |
 (
-	read firstline
-	echo $firstline
+    read -n 2 i
+    echo $i
+    read line
+    while [[ $n -lt $i ]]
+    do
+    	read line
+        host=$( echo $line | awk '{ print $2 }' )
 
-	numberOfServers=$( echo $firstline | awk '{ print $1}')
+        echo $host
+        gnome-terminal -e "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $netid@$host killall -u $netid" &
+        sleep 1
 
-	while [[ -z " $n -lt $numberOfServers" ]]
-	do
-		read line
-		host=$(echo $line | awk '{print $1}')
-		ssh $netid@$host pkill -9 java -u $netid &
-		echo "Killed process running in $host"
-		sleep 1
-
-		n=$(( n + 1 ))
-	done
-
-
+        n=$(( n + 1 ))
+    done
+   
 )
 
-echo "Cleanup Complete"
 
+echo "Cleanup complete"
