@@ -1,5 +1,6 @@
 import java.io.Serializable;
 public class LocalState implements Serializable{
+private static final long serialVersionUID = 1L;
 int[] stateInfo;
 int nodeNumber;
 boolean snapshotCompleted;

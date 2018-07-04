@@ -1,12 +1,11 @@
 import java.util.ArrayList;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.IOException;
 import java.net.InetAddress;
-import java.net.Socket;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.*;
 import java.util.Random;
+import java.io.PrintWriter;
+import java.io.FileWriter;
+
 public class Controller {
 	static int totalMessagesSent=0;
 	static long timeOfLastSnapshot;
@@ -31,9 +30,10 @@ public class Controller {
 	static int nextSnapshotNumber;
 	static LinkedBlockingQueue<Message> upStreamClientQueue;
 	static int upStreamNodeID;
-	
+	static ArrayList<LinkedBlockingQueue<Message>> downStreamClientQueueList;
+	static ArrayList<Integer> downStreamClientQueueIDs;
+	static boolean terminate;
 	public static void main(String[] args) {
-
 		conf = new Config(args[0]);
 		clock = new AtomicIntegerArray(conf.getNumNodes());
 		clientQueueList = new ArrayList<LinkedBlockingQueue<Message>>();
@@ -117,9 +117,9 @@ public class Controller {
 			int upStreamIndex=findChannelIndex(nodeQueueLocations,thisNodesVertex.getUpStreamNode().getNumber());
 			upStreamClientQueue=clientQueueList.get(upStreamIndex);
 		}
-		ArrayList<LinkedBlockingQueue<Message>> downStreamClientQueueList = new ArrayList<LinkedBlockingQueue<Message>>();
+		downStreamClientQueueList = new ArrayList<LinkedBlockingQueue<Message>>();
 		//number at index x is the id of node the queue at x in downStreamClientQueueList connects to
-		ArrayList<Integer> downStreamClientQueueIDs = new ArrayList<Integer>();
+		downStreamClientQueueIDs = new ArrayList<Integer>();
 		for(int i=0;i<thisNodesVertex.getDownStreamNodes().size();i++)
 		{
 			int downStreamNodeID=thisNodesVertex.getDownStreamNodes().get(i).getNumber();
@@ -140,7 +140,7 @@ public class Controller {
 		beganSnapshot= new ArrayList<Boolean>(); //index is true if this node has received a marker message for that iteration of snapshot
 		timeOfLastSnapshot=System.currentTimeMillis();
 		timeOfLastMessageSend=System.currentTimeMillis(); 
-		boolean terminate=false;
+		terminate=false;
 		while(!terminate)
 		{
 			//check whether this node is node 0 and if so whether it's time to start a snapshot
@@ -149,10 +149,9 @@ public class Controller {
 			//check whether to send application message
 			checkSendAppMessage();
 			
-			//check whether have received application message
+			//check whether have cation message
 			checkReceiveAppMessages();
 
-			
 			//check for marker messages
 			checkReceiveMarkerMessage();
 
@@ -160,117 +159,123 @@ public class Controller {
 			checkSendStateReports();
 
 			//if received a statereport and this isn't node 0 pass it upstream
-			passOnStateReports();
+			checkPassOnStateReports();
 			
-			//if received a statereport and this is node 0 store it in collectedSnapshots
-			if(thisNodesID==0)
-			{
-				for(int i=0;i<serverQueueList.size();i++)
-				{
-					if(serverQueueList.get(i).peek()!=null &&serverQueueList.get(i).peek().getMessageType().equals("STATEREPORT"))
-					{
-						Message m=serverQueueList.get(i).poll();
-						LocalState report=m.getStateReport();
-						int iteration=report.getIterationNumber();
-						collectedSnapshots.get(iteration)[report.getNodeNumber()]=report; 
-						
-						//if received a state report from a passive process check whether system is passive and should terminate
-						if(m.getStateReport().getActivityStatus()==false)
-						{
-							//check whether all nodes were passive in latest snapshot
-							boolean allNodesPassive=true;
-							for(int j=0;j<collectedSnapshots.get(iteration).length;j++)
-							{
-								if(collectedSnapshots.get(iteration)[j]==null||collectedSnapshots.get(iteration)[j].getActivityStatus()==true)//there is an active node in the snapshot
-								{
-									allNodesPassive=false;
-								}
-							}
-							//if allNodesPassive is true there are no active nodes in the current snapshot
-							//if previous snapshot was also passive and clocks have not changed then system is passive
-							boolean allPrevPassive=true;
-							if(iteration==0)
-							{
-								allPrevPassive=false;
-							}
-							if(allNodesPassive&&iteration>=1)
-							{
-								for(int j=0;j<collectedSnapshots.get(iteration-1).length;j++)
-								{
-									if(collectedSnapshots.get(iteration-1)[j]==null||collectedSnapshots.get(iteration-1)[j].getActivityStatus()==true)//there is an active node in the snapshot
-									{
-										allPrevPassive=false;
-									}
-								}
-							}
-							boolean clocksEqual=true;
-							if(allNodesPassive&&allPrevPassive)
-							{
-								for(int j=0;j<collectedSnapshots.get(iteration).length;j++) //for each local state j in snapshot iteration
-								{
-									LocalState latestState= collectedSnapshots.get(iteration)[j];
-									LocalState prevState=collectedSnapshots.get(iteration-1)[j];
-									for(int k=0;k<latestState.getStateInfo().length;k++)
-									{
-										if(latestState.getStateInfo()[k]!=prevState.getStateInfo()[k])
-										{
-											clocksEqual=false;
-										}
-									}
-								}
-							}
-							//if true then all nodes are passive and all channels are empty
-							if(allNodesPassive&&allPrevPassive&&clocksEqual) //Send out termination message
-							{
-								for(int j=0;j<downStreamClientQueueList.size();j++)
-								{
-									Message terminator = new Message(thisNodesID, downStreamClientQueueIDs.get(j),"",clock,"TERMINATE",null);
-									try {downStreamClientQueueList.get(j).put(terminator);}  catch(Exception e) {}
-								}
-								terminate=true;
-							}
-						}	
-					}
-				}
-			}
-//TODO: add termination procedures to all nodes and detection to node 0	
-			
+			//if received a statereport and this is node 0 store it in collectedSnapshots and decide whether system is ready to terminate
+			processStateReports();
 
-			
 			//if terminate message is received, ends loop and propagates terminate command
-			for(int i=0;i<serverQueueList.size();i++)
-			{
-				if(serverQueueList.get(i).peek()!=null &&serverQueueList.get(i).peek().getMessageType().equals("TERMINATE"))
-				{
-					terminate=true;
-					//send terminate message to downstream nodes
-					for(int j=0;j<downStreamClientQueueList.size();j++) 
-					{
-						Message terminator= new Message(thisNodesID, downStreamClientQueueIDs.get(j), "", clock, "TERMINATE",null);
-						try 
-						{
-							downStreamClientQueueList.get(j).put(terminator);	
-						}
-						catch(Exception e) {e.printStackTrace();}
-					}
-					break;  //send out terminate messages to all neighbors once then exit for loop
-				}
-			}
+			processTerminateMessages();
+			
 		}//end main while loop
-//TODO: remove test code
-//TEST CODE, PRINT OUT ENTIRE SNAPSHOT RECORD		
-			System.out.println("Printing out snapshot record");
-			for(int i=0;i<snapShots.size();i++)
-			{
-				int[] snap=snapShots.get(i).getStateInfo();
-				for(int j=0;j<snap.length;j++)
-				{
-					System.out.print(snap[j]+" ");
-				}
-				System.out.println();
-			}
+		
+		if(thisNodesID==0)
+		{
+			writeLogsToFile();
+		}
+		System.out.println();
+		System.out.println("done.");
 	}
 
+	public static void processTerminateMessages()
+	{
+		//if terminate message is received, ends loop and propagates terminate command
+		for(int i=0;i<serverQueueList.size();i++)
+		{
+			if(serverQueueList.get(i).peek()!=null &&serverQueueList.get(i).peek().getMessageType().equals("TERMINATE"))
+			{
+				serverQueueList.get(i).poll();
+				terminate=true;
+				//send terminate message to downstream nodes
+				for(int j=0;j<downStreamClientQueueList.size();j++) 
+				{
+					Message terminator= new Message(thisNodesID, downStreamClientQueueIDs.get(j), "", clock, "TERMINATE",null);
+					try 
+					{
+						downStreamClientQueueList.get(j).put(terminator);	
+					}
+					catch(Exception e) {e.printStackTrace();}
+				}
+				break;  //send out terminate messages to all neighbors once then exit for loop
+			}
+		}
+	}
+	
+	//if this is node 0 process state report and decide whether to terminate
+	public static void processStateReports()
+	{
+		//if received a statereport and this is node 0 store it in collectedSnapshots
+		if(thisNodesID==0)
+		{
+			for(int i=0;i<serverQueueList.size();i++)
+			{
+				if(serverQueueList.get(i).peek()!=null &&serverQueueList.get(i).peek().getMessageType().equals("STATEREPORT"))
+				{
+					Message m=serverQueueList.get(i).poll();
+					LocalState report=m.getStateReport();
+					int iteration=report.getIterationNumber();
+					collectedSnapshots.get(iteration)[report.getNodeNumber()]=report; 
+					
+					//if received a state report from a passive process check whether system is passive and should terminate
+					if(m.getStateReport().getActivityStatus()==false)
+					{
+						//check whether all nodes were passive in latest snapshot
+						boolean allNodesPassive=true;
+						for(int j=0;j<collectedSnapshots.get(iteration).length;j++)
+						{
+							if(collectedSnapshots.get(iteration)[j]==null||collectedSnapshots.get(iteration)[j].getActivityStatus()==true)//there is an active node in the snapshot
+							{
+								allNodesPassive=false;
+							}
+						}
+						//if allNodesPassive is true there are no active nodes in the current snapshot
+						//if previous snapshot was also passive and clocks have not changed then system is passive
+						boolean allPrevPassive=true;
+						if(iteration==0)
+						{
+							allPrevPassive=false;
+						}
+						if(allNodesPassive&&iteration>=1)
+						{
+							for(int j=0;j<collectedSnapshots.get(iteration-1).length;j++)
+							{
+								if(collectedSnapshots.get(iteration-1)[j]==null||collectedSnapshots.get(iteration-1)[j].getActivityStatus()==true)//there is an active node in the snapshot
+								{
+									allPrevPassive=false;
+								}
+							}
+						}
+						boolean clocksEqual=true;
+						if(allNodesPassive&&allPrevPassive)
+						{
+							for(int j=0;j<collectedSnapshots.get(iteration).length;j++) //for each local state j in snapshot iteration
+							{
+								LocalState latestState= collectedSnapshots.get(iteration)[j];
+								LocalState prevState=collectedSnapshots.get(iteration-1)[j];
+								for(int k=0;k<latestState.getStateInfo().length;k++)
+								{
+									if(latestState.getStateInfo()[k]!=prevState.getStateInfo()[k])
+									{
+										clocksEqual=false;
+									}
+								}
+							}
+						}
+						//if true then all nodes are passive and all channels are empty
+						if(allNodesPassive&&allPrevPassive&&clocksEqual) //Send out termination message
+						{
+							for(int j=0;j<downStreamClientQueueList.size();j++)
+							{
+								Message terminator = new Message(thisNodesID, downStreamClientQueueIDs.get(j),"",clock,"TERMINATE",null);
+								try {downStreamClientQueueList.get(j).put(terminator);}  catch(Exception e) {}
+							}
+							terminate=true;
+						}
+					}	
+				}
+			}
+		}
+	}
 	
 	//checks whether node should send app msg and if so sends one
 	public static void checkSendAppMessage()
@@ -290,12 +295,6 @@ public class Controller {
 					{
 						clock.getAndIncrement(senderIndex);
 						Message mSend= new Message(thisNodesID, destinationID, "", clock, "APPMSG", null);
-						System.out.print("sent application message to node "+mSend.getReceiver()+" with timestamp ");
-						for(int k=0;k<mSend.getTimeStamp().length();k++)
-						{
-							System.out.print(mSend.getTimeStamp().get(k)+" ");
-						}
-						System.out.println();
 						try{
 							clientQueueList.get(destinationIndex).put(mSend);
 						}
@@ -432,11 +431,6 @@ public class Controller {
 			while(serverQueueList.get(i).peek()!=null&&serverQueueList.get(i).peek().getMessageType().equals("APPMSG")) 
 			{
 				Message mReceived=serverQueueList.get(i).poll();
-					System.out.print("received application message from node "+mReceived.getSender()+" with timestamp ");
-					for(int k=0;k<mReceived.getTimeStamp().length();k++)
-					{
-						System.out.print(mReceived.getTimeStamp().get(k)+" ");
-					}
 					//update this nodes clock
 					for(int j=0;j<mReceived.getTimeStamp().length();j++)
 					{
@@ -471,9 +465,9 @@ public class Controller {
 			}
 		}
 	}
-	
+
 	//check if have received any state reports destined for node 0 (and this node is not node 0)
-	public static void passOnStateReports()
+	public static void checkPassOnStateReports()
 	{
 		if(thisNodesID!=0)
 		{
@@ -503,7 +497,6 @@ public class Controller {
 					Message m= new Message(thisNodesID,upStreamNodeID,"",clock,"STATEREPORT",snapShots.get(i));
 					try 
 					{
-						System.out.println("sending state report with activity status "+m.getStateReport().getActivityStatus());
 						upStreamClientQueue.put(m);
 					}
 					catch(Exception e) {e.printStackTrace();}
@@ -511,6 +504,41 @@ public class Controller {
 				}
 			}
 		}
+	}
+	
+	//writes to outfile.txt in current directory
+	public static void writeLogsToFile()
+	{
+		FileWriter  w;
+		PrintWriter pw=null;
+		try {
+		w= new FileWriter("outfile.txt");
+		pw = new PrintWriter(w);
+		}
+		catch(Exception e) {e.printStackTrace();}
+
+		//print snapshots to file
+		for(int i=0;i<collectedSnapshots.size();i++)
+		{
+				pw.println("Snapshot number "+i+":");
+				for(int j=0;j<collectedSnapshots.get(i).length;j++)
+				{
+					pw.print("Node "+j+": ");
+					LocalState s=collectedSnapshots.get(i)[j];
+					if(s!=null) 
+					{
+						for(int k=0;k<s.getStateInfo().length;k++)
+						{
+							pw.print(s.getStateInfo()[k]+" ");
+						}
+					}
+					pw.println();
+				}
+				pw.println();
+		}
+
+		pw.flush();
+		pw.close();
 	}
 	
 	//returns index of node in neighbor list (same as in queue locations list)
@@ -537,7 +565,6 @@ public class Controller {
 						return i;
 					}
 		}
-		System.out.println("Error finding node index");
 		return -1;
 	}
 	
