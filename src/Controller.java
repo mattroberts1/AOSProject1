@@ -171,7 +171,7 @@ public class Controller {
 			writeLogsToFile();
 		}
 		System.out.println();
-		System.out.println("done.");
+		System.out.println("done. ");
 	}
 
 	public static void processTerminateMessages()
