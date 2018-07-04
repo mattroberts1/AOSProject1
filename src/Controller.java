@@ -32,7 +32,9 @@ public class Controller {
 	static ArrayList<LinkedBlockingQueue<Message>> downStreamClientQueueList;
 	static ArrayList<Integer> downStreamClientQueueIDs;
 	static boolean terminate;
+	static String configFileName="";
 	public static void main(String[] args) {
+		configFileName=args[0];
 		conf = new Config(args[0]);
 		clock = new AtomicIntegerArray(conf.getNumNodes());
 		clientQueueList = new ArrayList<LinkedBlockingQueue<Message>>();
@@ -504,21 +506,20 @@ public class Controller {
 	//writes to outfile.txt in current directory
 	public static void writeLogsToFile()
 	{
-		FileWriter  w;
-		PrintWriter pw=null;
-		try {
-		w= new FileWriter("outfile.txt");
-		pw = new PrintWriter(w);
-		}
-		catch(Exception e) {e.printStackTrace();}
-
-		//print snapshots to file
-		for(int i=0;i<collectedSnapshots.size();i++)
+		for(int j=0;j<collectedSnapshots.get(0).length;j++)//for each process
 		{
-			//	pw.println("Snapshot number "+i+":");
-				for(int j=0;j<collectedSnapshots.get(i).length;j++)
-				{
-					pw.print("Node "+j+": ");
+			FileWriter  w;
+			PrintWriter pw=null;
+			try 
+			{
+				w= new FileWriter(configFileName+"-"+j+".out");
+				pw = new PrintWriter(w);
+			}
+			catch(Exception e) {e.printStackTrace();}
+
+
+			for(int i=0;i<collectedSnapshots.size();i++)//for each of the stored snapshots
+			{
 					LocalState s=collectedSnapshots.get(i)[j];
 					if(s!=null) 
 					{
@@ -528,12 +529,10 @@ public class Controller {
 						}
 					}
 					pw.println();
-				}
-				pw.println();
+			}
+			pw.flush();
+			pw.close();
 		}
-
-		pw.flush();
-		pw.close();
 	}
 	
 	//returns index of node in neighbor list (same as in queue locations list)
