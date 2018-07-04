@@ -28,6 +28,10 @@ public class Controller {
 	static int[] thisNodesNeighbors;
 	static AtomicIntegerArray connectionEstablished;
 	static ArrayList<ArrayList<String>> neighborList;
+	static int nextSnapshotNumber;
+	static LinkedBlockingQueue<Message> upStreamClientQueue;
+	static int upStreamNodeID;
+	
 	public static void main(String[] args) {
 
 		conf = new Config(args[0]);
@@ -36,7 +40,7 @@ public class Controller {
 		serverQueueList = new ArrayList<LinkedBlockingQueue<Message>>();
 		collectedSnapshots=new ArrayList<LocalState[]>(); //arraylist of arrays of localstates to store snapshot info in node 0
 		//array at index x in list is x'th snapshot, localstate at index i in x is for process with ID i
-		int nextSnapshotNumber=0; //this will only be used by node 0
+		nextSnapshotNumber=0; //this will only be used by node 0
 		isActive=false;
 		thisNodesName=getdcxxName();
 		nodeIDList =conf.getNodeIDList();
@@ -105,8 +109,8 @@ public class Controller {
 		TreeMaker t = new TreeMaker(conf);
 		Graph tree=t.createTree();
 		Vertex thisNodesVertex=tree.getVertex(tree.findVertexIndex(thisNodesID));
-		int upStreamNodeID=0;
-		LinkedBlockingQueue<Message> upStreamClientQueue=null;
+		upStreamNodeID=0;
+		upStreamClientQueue=null;
 		if(thisNodesID!=0)
 		{
 			upStreamNodeID=thisNodesVertex.getUpStreamNode().getNumber();
@@ -140,80 +144,23 @@ public class Controller {
 		while(!terminate)
 		{
 			//check whether this node is node 0 and if so whether it's time to start a snapshot
-			if(thisNodesID==0&&System.currentTimeMillis()>timeOfLastSnapshot+conf.getSnapshotDelay())
-			{
-				collectedSnapshots.add(new LocalState[clock.length()]);
-				System.out.println("node 0 initiating snapshot");
-				timeOfLastSnapshot=System.currentTimeMillis();//reset timer for next snapshot
-				//send out marker messages
-				for(int i=0;i<clientQueueList.size();i++)
-				{
-					Message marker = new Message(thisNodesID, nodeQueueLocations[i],Integer.toString(nextSnapshotNumber),clock, "MARKMSG",null);
-					try {
-						clientQueueList.get(i).put(marker);
-					}
-					catch(Exception e) {e.printStackTrace();}	
-				}
-				//take snapshot on node 0 (since it won't be started by receipt of a marker msg like on other nodes)
-				beganSnapshot.add(true);
-				channelsMarkedList.add(new boolean[neighborList.get(thisNodesID).size()]);
-				//instantly complete snapshot for node 0 by setting all channels to marked
-				for(int i=0;i<channelsMarkedList.get(nextSnapshotNumber).length;i++)
-				{
-					channelsMarkedList.get(nextSnapshotNumber)[i]=true;
-				}
-				//save clock of node 0 to snapshot
-				snapShots.add(new LocalState(new int[conf.getNumNodes()],thisNodesID,nextSnapshotNumber));
-				for(int i=0;i<clock.length();i++)
-				{
-					snapShots.get(nextSnapshotNumber).setStateIndex(i, clock.get(i));
-				}
-				collectedSnapshots.get(nextSnapshotNumber)[thisNodesID]=snapShots.get(nextSnapshotNumber);
-				nextSnapshotNumber++; //increment counter for next time a snapshot is started
-			}
-			
-			//check whether have received application message
-			checkReceiveAppMessages();
+			node0CheckSendMarkers();
 			
 			//check whether to send application message
 			checkSendAppMessage();
 			
+			//check whether have received application message
+			checkReceiveAppMessages();
+
+			
 			//check for marker messages
 			checkReceiveMarkerMessage();
 
-			//check if there are any completed state reports to transmit (that haven't already been sent out)
-			if(thisNodesID!=0)
-			{
-				for(int i=0;i<snapShots.size();i++)
-				{
-					if(snapShots.get(i).getCompletedStatus()==true&&snapShots.get(i).getTransmittedStatus()==false)
-					{
-						Message m= new Message(thisNodesID,upStreamNodeID,"",clock,"STATEREPORT",snapShots.get(i));
-						try 
-						{
-							System.out.println("sending state report with activity status"+m.getStateReport().getActivityStatus());
-							upStreamClientQueue.put(m);
-						}
-						catch(Exception e) {e.printStackTrace();}
-						snapShots.get(i).setTransmittedStatus(true);
-					}
-				}
-			}
+			//check if there are any completed state reports to send (that haven't already been sent out) and if so send them upstream
+			checkSendStateReports();
+
 			//if received a statereport and this isn't node 0 pass it upstream
-			if(thisNodesID!=0)
-			{
-				for(int i=0;i<serverQueueList.size();i++)
-				{
-					if(serverQueueList.get(i).peek()!=null &&serverQueueList.get(i).peek().getMessageType().equals("STATEREPORT"))
-					{
-						Message m=serverQueueList.get(i).poll();
-						try {
-						upStreamClientQueue.put(m);
-						}
-						catch(Exception e) {e.printStackTrace();}
-					}
-				}
-			}
+			passOnStateReports();
 			
 			//if received a statereport and this is node 0 store it in collectedSnapshots
 			if(thisNodesID==0)
@@ -357,7 +304,7 @@ public class Controller {
 						messagesForThisCycle--;
 						totalMessagesSent++;
 					}
-					if(messagesForThisCycle==0)
+					if(messagesForThisCycle==0||totalMessagesSent>=conf.getMaxNumber())
 					{
 						isActive=false;
 					}
@@ -365,7 +312,43 @@ public class Controller {
 			}
 		}
 	}
-
+	
+	//checks if this is node 0 and it's time to start for the next snapshot
+	public static void node0CheckSendMarkers()
+	{
+		if(thisNodesID==0&&System.currentTimeMillis()>timeOfLastSnapshot+conf.getSnapshotDelay())
+		{
+			collectedSnapshots.add(new LocalState[clock.length()]);
+			System.out.println("node 0 initiating snapshot "+nextSnapshotNumber);
+			timeOfLastSnapshot=System.currentTimeMillis();//reset timer for next snapshot
+			//send out marker messages
+			for(int i=0;i<clientQueueList.size();i++)
+			{
+				Message marker = new Message(thisNodesID, nodeQueueLocations[i],Integer.toString(nextSnapshotNumber),clock, "MARKMSG",null);
+				try {
+					clientQueueList.get(i).put(marker);
+				}
+				catch(Exception e) {e.printStackTrace();}	
+			}
+			//take snapshot on node 0 (since it won't be started by receipt of a marker msg like on other nodes)
+			beganSnapshot.add(true);
+			channelsMarkedList.add(new boolean[neighborList.get(thisNodesID).size()]);
+			//instantly complete snapshot for node 0 by setting all channels to marked
+			for(int i=0;i<channelsMarkedList.get(nextSnapshotNumber).length;i++)
+			{
+				channelsMarkedList.get(nextSnapshotNumber)[i]=true;
+			}
+			//save clock of node 0 to snapshot
+			snapShots.add(new LocalState(new int[conf.getNumNodes()],thisNodesID,nextSnapshotNumber,isActive));
+			for(int i=0;i<clock.length();i++)
+			{
+				snapShots.get(nextSnapshotNumber).setStateIndex(i, clock.get(i));
+			}
+			collectedSnapshots.get(nextSnapshotNumber)[thisNodesID]=snapShots.get(nextSnapshotNumber);
+			nextSnapshotNumber++; //increment counter for next time a snapshot is started
+		}
+	}
+	
 	//check whether node has received any marker messages and if so handles them
 	public static void checkReceiveMarkerMessage()
 	{
@@ -378,16 +361,16 @@ public class Controller {
 				marker=serverQueueList.get(i).poll();
 				//handle marker message
 				int iteration = Integer.parseInt(marker.getText());
-				while(beganSnapshot.size()<=iteration+1)  //make sure we have space in lists, will only run if iteration would exceed current highest index
+				while(beganSnapshot.size()<=iteration)  //make sure we have space in lists, will only run if iteration would exceed current highest index
 				{
 					beganSnapshot.add(false);
 					channelsMarkedList.add(new boolean[conf.getNeighborList().get(thisNodesID).size()]);
 					int temp=snapShots.size();//the iteration number for the next snapshot
-					snapShots.add(new LocalState(new int[conf.getNumNodes()],thisNodesID,temp));
+					snapShots.add(new LocalState(new int[conf.getNumNodes()],thisNodesID,temp, isActive));
 				}
 				if(!beganSnapshot.get(iteration))//have not yet received marker for this iteration of snapshot
 				{
-					beganSnapshot.set(i,  true);
+					beganSnapshot.set(iteration,  true);
 					for(int j=0;j<channelsMarkedList.get(iteration).length;j++)
 					{
 						channelsMarkedList.get(iteration)[j]=false;
@@ -449,14 +432,11 @@ public class Controller {
 			while(serverQueueList.get(i).peek()!=null&&serverQueueList.get(i).peek().getMessageType().equals("APPMSG")) 
 			{
 				Message mReceived=serverQueueList.get(i).poll();
-				if(mReceived!=null)
-				{
 					System.out.print("received application message from node "+mReceived.getSender()+" with timestamp ");
 					for(int k=0;k<mReceived.getTimeStamp().length();k++)
 					{
 						System.out.print(mReceived.getTimeStamp().get(k)+" ");
 					}
-					System.out.println();
 					//update this nodes clock
 					for(int j=0;j<mReceived.getTimeStamp().length();j++)
 					{
@@ -483,12 +463,52 @@ public class Controller {
 						}
 					}
 					clock.getAndIncrement(receiverIndex);
-					if(!isActive)
+					if(!isActive&&totalMessagesSent<conf.getMaxNumber())
 					{
 						isActive=true;
 						messagesForThisCycle=chooseNumMessages(conf.getMinPerActive(),conf.getMaxPerActive());
 					}
-				}	
+			}
+		}
+	}
+	
+	//check if have received any state reports destined for node 0 (and this node is not node 0)
+	public static void passOnStateReports()
+	{
+		if(thisNodesID!=0)
+		{
+			for(int i=0;i<serverQueueList.size();i++)
+			{
+				if(serverQueueList.get(i).peek()!=null &&serverQueueList.get(i).peek().getMessageType().equals("STATEREPORT"))
+				{
+					Message m=serverQueueList.get(i).poll();
+					try {
+					upStreamClientQueue.put(m);
+					}
+					catch(Exception e) {e.printStackTrace();}
+				}
+			}
+		}
+	}
+	
+	//checks if there are any state reports that need to be sent out and if so passes them to upstream node
+	public static void checkSendStateReports()
+	{
+		if(thisNodesID!=0)
+		{
+			for(int i=0;i<snapShots.size();i++)
+			{
+				if(snapShots.get(i).getCompletedStatus()==true&&snapShots.get(i).getTransmittedStatus()==false)
+				{
+					Message m= new Message(thisNodesID,upStreamNodeID,"",clock,"STATEREPORT",snapShots.get(i));
+					try 
+					{
+						System.out.println("sending state report with activity status "+m.getStateReport().getActivityStatus());
+						upStreamClientQueue.put(m);
+					}
+					catch(Exception e) {e.printStackTrace();}
+					snapShots.get(i).setTransmittedStatus(true);
+				}
 			}
 		}
 	}

@@ -7,11 +7,11 @@ boolean snapshotTransmitted;
 boolean activityStatus; //whether the node is active or passive (true is active)
 int iterationNumber;
 
-public LocalState(int[] emptyArray, int n, int i)
+public LocalState(int[] emptyArray, int n, int i, boolean a)
 {
 	snapshotCompleted=false;
 	snapshotTransmitted=false;
-	activityStatus=false;
+	activityStatus=a;
 	stateInfo=emptyArray;
 	nodeNumber=n;
 	iterationNumber=i;
