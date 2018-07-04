@@ -5,7 +5,6 @@ import java.util.concurrent.atomic.*;
 import java.util.Random;
 import java.io.PrintWriter;
 import java.io.FileWriter;
-
 public class Controller {
 	static int totalMessagesSent=0;
 	static long timeOfLastSnapshot;
@@ -62,7 +61,6 @@ public class Controller {
 		//value at index x in nodeQueueLocations is the nodeID that the queue at x in nodeQueueLists is used to send messages to
 		nodeQueueLocations = new int[neighborList.get(thisNodesID).size()]; 
 		
-	
 		//establish connections between this node and other nodes listed in config file
 		connectionEstablished = new AtomicIntegerArray(neighborList.get(thisNodesID).size());
 		for(int i=0;i<connectionEstablished.length();i++)  //initialize all values to 0, they will be set to 1 once each socket connection is established in the Client threads
@@ -127,9 +125,6 @@ public class Controller {
 			downStreamClientQueueList.add(clientQueueList.get(downStreamNodeIndex));
 			downStreamClientQueueIDs.add(downStreamNodeID);
 		}
-		
-		
-		
 		
 //MAIN LOOP		
 
@@ -520,7 +515,7 @@ public class Controller {
 		//print snapshots to file
 		for(int i=0;i<collectedSnapshots.size();i++)
 		{
-				pw.println("Snapshot number "+i+":");
+			//	pw.println("Snapshot number "+i+":");
 				for(int j=0;j<collectedSnapshots.get(i).length;j++)
 				{
 					pw.print("Node "+j+": ");
